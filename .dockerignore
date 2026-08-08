@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/[Tt]est[Rr]esult*/
+**/coverage/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.specify/
+specs/
+docker/.env
+*.md
