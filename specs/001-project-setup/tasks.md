@@ -35,12 +35,12 @@ Estrutura definida em [plan.md](./plan.md): `src/SalesApi.{Domain,Application,In
 
 **Purpose**: Esqueleto do repositório, antes de qualquer projeto .NET existir
 
-- [ ] T001 Criar diretórios `src/`, `tests/`, `docker/`, `.github/workflows/` na raiz do repositório, conforme plan.md
-- [ ] T002 Criar `SalesApi.sln` vazio na raiz do repositório
-- [ ] T003 [P] Criar `global.json` na raiz fixando a versão do .NET SDK 8.0.x
-- [ ] T004 [P] Criar `Directory.Build.props` na raiz habilitando `Nullable`, `ImplicitUsings` e `TreatWarningsAsErrors` para todos os projetos
-- [ ] T005 [P] Criar `.editorconfig` na raiz com as regras de estilo de código C#
-- [ ] T006 [P] Criar `.gitignore` na raiz cobrindo artefatos de build do .NET e do Docker
+- [X] T001 Criar diretórios `src/`, `tests/`, `docker/`, `.github/workflows/` na raiz do repositório, conforme plan.md
+- [X] T002 Criar `SalesApi.sln` vazio na raiz do repositório
+- [X] T003 [P] Criar `global.json` na raiz fixando a versão do .NET SDK 8.0.x
+- [X] T004 [P] Criar `Directory.Build.props` na raiz habilitando `Nullable`, `ImplicitUsings` e `TreatWarningsAsErrors` para todos os projetos
+- [X] T005 [P] Criar `.editorconfig` na raiz com as regras de estilo de código C#
+- [X] T006 [P] Criar `.gitignore` na raiz cobrindo artefatos de build do .NET e do Docker
 
 ---
 
@@ -51,15 +51,15 @@ qualquer user story começar
 
 **⚠️ CRITICAL**: Nenhuma user story pode começar antes desta fase estar completa
 
-- [ ] T007 Criar projeto de biblioteca `SalesApi.Domain` em `src/SalesApi.Domain/SalesApi.Domain.csproj` (net8.0, sem dependências de outros projetos)
-- [ ] T008 Criar projeto de biblioteca `SalesApi.Application` em `src/SalesApi.Application/SalesApi.Application.csproj`, referenciando `SalesApi.Domain`
-- [ ] T009 Criar projeto de biblioteca `SalesApi.Infrastructure` em `src/SalesApi.Infrastructure/SalesApi.Infrastructure.csproj`, referenciando `SalesApi.Application`
-- [ ] T010 Criar projeto Web API `SalesApi.Api` em `src/SalesApi.Api/SalesApi.Api.csproj`, referenciando `SalesApi.Infrastructure` e `SalesApi.Application`
-- [ ] T011 [P] Criar projeto de testes xUnit `SalesApi.Domain.Tests` em `tests/SalesApi.Domain.Tests/`, referenciando `SalesApi.Domain` e o pacote `coverlet.collector`
-- [ ] T012 [P] Criar projeto de testes xUnit `SalesApi.Application.Tests` em `tests/SalesApi.Application.Tests/`, referenciando `SalesApi.Application` e `coverlet.collector`
-- [ ] T013 [P] Criar projeto de testes xUnit `SalesApi.Api.Tests` em `tests/SalesApi.Api.Tests/`, referenciando `SalesApi.Api`, `Microsoft.AspNetCore.Mvc.Testing` e `coverlet.collector`
-- [ ] T014 Adicionar os seis projetos ao `SalesApi.sln`
-- [ ] T015 Validar que `dotnet build SalesApi.sln` conclui com sucesso com a estrutura de camadas vazia
+- [X] T007 Criar projeto de biblioteca `SalesApi.Domain` em `src/SalesApi.Domain/SalesApi.Domain.csproj` (net8.0, sem dependências de outros projetos)
+- [X] T008 Criar projeto de biblioteca `SalesApi.Application` em `src/SalesApi.Application/SalesApi.Application.csproj`, referenciando `SalesApi.Domain`
+- [X] T009 Criar projeto de biblioteca `SalesApi.Infrastructure` em `src/SalesApi.Infrastructure/SalesApi.Infrastructure.csproj`, referenciando `SalesApi.Application`
+- [X] T010 Criar projeto Web API `SalesApi.Api` em `src/SalesApi.Api/SalesApi.Api.csproj`, referenciando `SalesApi.Infrastructure` e `SalesApi.Application`
+- [X] T011 [P] Criar projeto de testes xUnit `SalesApi.Domain.Tests` em `tests/SalesApi.Domain.Tests/`, referenciando `SalesApi.Domain` e o pacote `coverlet.collector`
+- [X] T012 [P] Criar projeto de testes xUnit `SalesApi.Application.Tests` em `tests/SalesApi.Application.Tests/`, referenciando `SalesApi.Application` e `coverlet.collector`
+- [X] T013 [P] Criar projeto de testes xUnit `SalesApi.Api.Tests` em `tests/SalesApi.Api.Tests/`, referenciando `SalesApi.Api`, `Microsoft.AspNetCore.Mvc.Testing` e `coverlet.collector`
+- [X] T014 Adicionar os seis projetos ao `SalesApi.sln`
+- [X] T015 Validar que `dotnet build SalesApi.sln` conclui com sucesso com a estrutura de camadas vazia
 
 **Checkpoint**: Solução compila; direção de dependência entre camadas (Princípio V/III da
 constitution) já garantida apenas pelas referências de projeto — nenhuma user story pode
@@ -76,11 +76,11 @@ confirmar que os três serviços ficam saudáveis.
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Criar `Dockerfile` multi-stage (build + runtime) para `SalesApi.Api` em `docker/Dockerfile`
-- [ ] T017 [US1] Criar `docker/docker-compose.yml` orquestrando os serviços `api`, `postgres` (imagem `postgres:16`) e `sonarqube` (imagem `sonarqube:community`), com healthchecks e volumes nomeados
-- [ ] T018 [US1] Criar `docker/.env.example` documentando as variáveis de ambiente exigidas pelo `docker-compose.yml` (credenciais do banco, connection string, senha inicial do SonarQube)
-- [ ] T019 [US1] Configurar `src/SalesApi.Api/appsettings.json` / variáveis de ambiente para ler a connection string do PostgreSQL a partir do ambiente do `docker-compose.yml`
-- [ ] T020 [US1] Validar, seguindo o passo 1 de quickstart.md, que `docker compose up` sobe os três serviços saudáveis sem nenhum passo manual adicional
+- [X] T016 [US1] Criar `Dockerfile` multi-stage (build + runtime) para `SalesApi.Api` em `docker/Dockerfile`
+- [X] T017 [US1] Criar `docker/docker-compose.yml` orquestrando os serviços `api`, `postgres` (imagem `postgres:16`) e `sonarqube` (imagem `sonarqube:community`), com healthchecks e volumes nomeados
+- [X] T018 [US1] Criar `docker/.env.example` documentando as variáveis de ambiente exigidas pelo `docker-compose.yml` (credenciais do banco, connection string, senha inicial do SonarQube)
+- [X] T019 [US1] Configurar `src/SalesApi.Api/appsettings.json` / variáveis de ambiente para ler a connection string do PostgreSQL a partir do ambiente do `docker-compose.yml`
+- [X] T020 [US1] Validar, seguindo o passo 1 de quickstart.md, que `docker compose up` sobe os três serviços saudáveis sem nenhum passo manual adicional
 
 **Checkpoint**: Ambiente completo sobe com um comando — User Story 1 entregue e testável
 independentemente.
@@ -99,24 +99,24 @@ projeto, que `SalesApi.Domain` não referencia nenhuma outra camada.
 
 > **Escrever estes testes primeiro; garantir que falham antes da implementação (Princípio II)**
 
-- [ ] T021 [P] [US2] Escrever teste unitário falhando garantindo que duas instâncias de `Entity` com o mesmo Id são iguais, em `tests/SalesApi.Domain.Tests/Common/EntityTests.cs`
-- [ ] T022 [P] [US2] Escrever teste unitário falhando garantindo que `Result.Success()`/`Result.Failure()` expõem corretamente `IsSuccess`/`Errors`, em `tests/SalesApi.Domain.Tests/Common/ResultTests.cs`
-- [ ] T023 [P] [US2] Escrever teste de integração falhando garantindo que o `AppDbContext` consegue abrir conexão contra o PostgreSQL, em `tests/SalesApi.Api.Tests/Infrastructure/AppDbContextConnectionTests.cs`
-- [ ] T023a [P] [US2] Escrever teste de integração falhando garantindo que um `IRequest` de exemplo (ex.: `PingQuery`) registrado no pipeline é despachado e retorna resposta via `IMediator`, em `tests/SalesApi.Application.Tests/Common/MediatorRegistrationTests.cs`
-- [ ] T023b [P] [US2] Escrever teste unitário falhando garantindo que o Mapster mapeia corretamente um objeto de exemplo (ex.: `SampleSource` → `SampleDestination`) configurado via `TypeAdapterConfig`, em `tests/SalesApi.Application.Tests/Common/MapsterConfigurationTests.cs`
+- [X] T021 [P] [US2] Escrever teste unitário falhando garantindo que duas instâncias de `Entity` com o mesmo Id são iguais, em `tests/SalesApi.Domain.Tests/Common/EntityTests.cs`
+- [X] T022 [P] [US2] Escrever teste unitário falhando garantindo que `Result.Success()`/`Result.Failure()` expõem corretamente `IsSuccess`/`Errors`, em `tests/SalesApi.Domain.Tests/Common/ResultTests.cs`
+- [X] T023 [P] [US2] Escrever teste de integração falhando garantindo que o `AppDbContext` consegue abrir conexão contra o PostgreSQL, em `tests/SalesApi.Api.Tests/Infrastructure/AppDbContextConnectionTests.cs`
+- [X] T023a [P] [US2] Escrever teste de integração falhando garantindo que um `IRequest` de exemplo (ex.: `PingQuery`) registrado no pipeline é despachado e retorna resposta via `IMediator`, em `tests/SalesApi.Application.Tests/Common/MediatorRegistrationTests.cs`
+- [X] T023b [P] [US2] Escrever teste unitário falhando garantindo que o Mapster mapeia corretamente um objeto de exemplo (ex.: `SampleSource` → `SampleDestination`) configurado via `TypeAdapterConfig`, em `tests/SalesApi.Application.Tests/Common/MapsterConfigurationTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Implementar classe base `Entity` (Id, igualdade por identidade) em `src/SalesApi.Domain/Common/Entity.cs` — faz T021 passar
-- [ ] T025 [P] [US2] Implementar tipos base `Result`/`Notification` em `src/SalesApi.Domain/Common/Result.cs` — faz T022 passar
-- [ ] T026 [P] [US2] Implementar tipo base `DomainEvent` em `src/SalesApi.Domain/Common/DomainEvent.cs`
-- [ ] T027 [US2] Adicionar pacote `MediatR` a `SalesApi.Application` e registrá-lo via extensão de DI em `src/SalesApi.Application/DependencyInjection.cs` — faz T023a passar
-- [ ] T028 [US2] Adicionar pacotes `Mapster` e `Mapster.DependencyInjection` a `SalesApi.Application` e registrá-los na mesma extensão de DI (`src/SalesApi.Application/DependencyInjection.cs`) — faz T023b passar
-- [ ] T028c [US2] Criar interface `IApplicationDbContext` em `src/SalesApi.Application/Common/IApplicationDbContext.cs`, definindo o contrato mínimo de acesso a dados (ex.: `SaveChangesAsync`) que a Infrastructure vai implementar
-- [ ] T029 [US2] Adicionar pacote `Npgsql.EntityFrameworkCore.PostgreSQL` e implementar `AppDbContext` (sem DbSets de negócio), implementando `IApplicationDbContext`, em `src/SalesApi.Infrastructure/Persistence/AppDbContext.cs` — faz T023 e T028c passar
-- [ ] T030 [US2] Registrar `AppDbContext` como `IApplicationDbContext` na DI (para que a camada Application dependa apenas da interface, nunca da classe concreta), com a connection string vinda de configuração, via extensão de DI em `src/SalesApi.Infrastructure/DependencyInjection.cs`
-- [ ] T031 [US2] Ligar as extensões de DI de `Application` e `Infrastructure` em `src/SalesApi.Api/Program.cs`
-- [ ] T032 [US2] Validar que `dotnet build SalesApi.sln` continua íntegro e que `SalesApi.Domain` não referencia nenhum outro projeto da solução
+- [X] T024 [P] [US2] Implementar classe base `Entity` (Id, igualdade por identidade) em `src/SalesApi.Domain/Common/Entity.cs` — faz T021 passar
+- [X] T025 [P] [US2] Implementar tipos base `Result`/`Notification` em `src/SalesApi.Domain/Common/Result.cs` — faz T022 passar
+- [X] T026 [P] [US2] Implementar tipo base `DomainEvent` em `src/SalesApi.Domain/Common/DomainEvent.cs`
+- [X] T027 [US2] Adicionar pacote `MediatR` a `SalesApi.Application` e registrá-lo via extensão de DI em `src/SalesApi.Application/DependencyInjection.cs` — faz T023a passar
+- [X] T028 [US2] Adicionar pacotes `Mapster` e `Mapster.DependencyInjection` a `SalesApi.Application` e registrá-los na mesma extensão de DI (`src/SalesApi.Application/DependencyInjection.cs`) — faz T023b passar
+- [X] T028c [US2] Criar interface `IApplicationDbContext` em `src/SalesApi.Application/Common/IApplicationDbContext.cs`, definindo o contrato mínimo de acesso a dados (ex.: `SaveChangesAsync`) que a Infrastructure vai implementar
+- [X] T029 [US2] Adicionar pacote `Npgsql.EntityFrameworkCore.PostgreSQL` e implementar `AppDbContext` (sem DbSets de negócio), implementando `IApplicationDbContext`, em `src/SalesApi.Infrastructure/Persistence/AppDbContext.cs` — faz T023 e T028c passar
+- [X] T030 [US2] Registrar `AppDbContext` como `IApplicationDbContext` na DI (para que a camada Application dependa apenas da interface, nunca da classe concreta), com a connection string vinda de configuração, via extensão de DI em `src/SalesApi.Infrastructure/DependencyInjection.cs`
+- [X] T031 [US2] Ligar as extensões de DI de `Application` e `Infrastructure` em `src/SalesApi.Api/Program.cs`
+- [X] T032 [US2] Validar que `dotnet build SalesApi.sln` continua íntegro e que `SalesApi.Domain` não referencia nenhum outro projeto da solução
 
 **Checkpoint**: Fundação arquitetural completa e testada — User Story 2 entregue e testável
 independentemente.
@@ -133,8 +133,8 @@ sucesso.
 
 ### Implementation for User Story 3
 
-- [ ] T033 [P] [US3] Escrever smoke test confirmando que o host de `SalesApi.Api` sobe sem exceções (via `WebApplicationFactory`) em `tests/SalesApi.Api.Tests/SmokeTests.cs`
-- [ ] T034 [US3] Validar, seguindo o passo 3 de quickstart.md, que `dotnet test SalesApi.sln --collect:"XPlat Code Coverage"` executa os três projetos de teste e reporta sucesso
+- [X] T033 [P] [US3] Escrever smoke test confirmando que o host de `SalesApi.Api` sobe sem exceções (via `WebApplicationFactory`) em `tests/SalesApi.Api.Tests/SmokeTests.cs`
+- [X] T034 [US3] Validar, seguindo o passo 3 de quickstart.md, que `dotnet test SalesApi.sln --collect:"XPlat Code Coverage"` executa os três projetos de teste e reporta sucesso
 
 **Checkpoint**: Suíte de testes funcional de ponta a ponta — User Story 3 entregue e testável
 independentemente.
@@ -152,14 +152,14 @@ aplicação e do banco de dados.
 
 > **Escrever estes testes primeiro; garantir que falham antes da implementação (Princípio II)**
 
-- [ ] T035 [P] [US4] Escrever teste de integração falhando garantindo que `GET /health` retorna 200 com o check do PostgreSQL saudável quando o banco está acessível, em `tests/SalesApi.Api.Tests/HealthCheckTests.cs`
-- [ ] T036 [P] [US4] Escrever teste de integração falhando garantindo que `GET /swagger/v1/swagger.json` retorna 200 e lista o endpoint `/health`, em `tests/SalesApi.Api.Tests/SwaggerTests.cs`
+- [X] T035 [P] [US4] Escrever teste de integração falhando garantindo que `GET /health` retorna 200 com o check do PostgreSQL saudável quando o banco está acessível, em `tests/SalesApi.Api.Tests/HealthCheckTests.cs`
+- [X] T036 [P] [US4] Escrever teste de integração falhando garantindo que `GET /swagger/v1/swagger.json` retorna 200 e lista o endpoint `/health`, em `tests/SalesApi.Api.Tests/SwaggerTests.cs`
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Adicionar pacote `Swashbuckle.AspNetCore` e registrar o middleware de Swagger/OpenAPI em `src/SalesApi.Api/Program.cs` — faz T036 passar
-- [ ] T038 [US4] Adicionar pacotes `Microsoft.Extensions.Diagnostics.HealthChecks` e `AspNetCore.HealthChecks.NpgSql`, registrando o health check do PostgreSQL a partir da connection string do `AppDbContext`, em `src/SalesApi.Api/Program.cs` — faz T035 passar
-- [ ] T039 [US4] Mapear o endpoint `/health` com formatador de resposta JSON conforme [contracts/health-check.md](./contracts/health-check.md), em `src/SalesApi.Api/HealthChecks/HealthCheckResponseWriter.cs`
+- [X] T037 [US4] Adicionar pacote `Swashbuckle.AspNetCore` e registrar o middleware de Swagger/OpenAPI em `src/SalesApi.Api/Program.cs` — faz T036 passar
+- [X] T038 [US4] Adicionar pacotes `Microsoft.Extensions.Diagnostics.HealthChecks` e `AspNetCore.HealthChecks.NpgSql`, registrando o health check do PostgreSQL a partir da connection string do `AppDbContext`, em `src/SalesApi.Api/Program.cs` — faz T035 passar
+- [X] T039 [US4] Mapear o endpoint `/health` com formatador de resposta JSON conforme [contracts/health-check.md](./contracts/health-check.md), em `src/SalesApi.Api/HealthChecks/HealthCheckResponseWriter.cs`
 
 **Checkpoint**: API explorável e verificável de ponta a ponta — User Story 4 entregue e
 testável independentemente.
@@ -176,11 +176,11 @@ liberando conforme a cobertura.
 
 ### Implementation for User Story 5
 
-- [ ] T040 [US5] Criar `.github/workflows/ci.yml` com o step de build (`dotnet restore` + `dotnet build`), disparado em push e pull request
-- [ ] T041 [US5] Adicionar ao `.github/workflows/ci.yml` o step de test, rodando `dotnet test --collect:"XPlat Code Coverage"` e publicando o relatório Cobertura como artefato
-- [ ] T042 [US5] Adicionar ao `.github/workflows/ci.yml` o step de sonar, instalando o `dotnet-sonarscanner` e executando `begin`/`end` contra o SonarCloud com `sonar.qualitygate.wait=true`, consumindo o secret `SONAR_TOKEN`
-- [ ] T043 [US5] Documentar no README.md (ver User Story 6) a configuração única necessária no SonarCloud (chave do projeto, organização, secret) para o pipeline funcionar
-- [ ] T044 [US5] Validar, seguindo o passo 6 de quickstart.md, que um Pull Request de teste mostra os checks de build, test e sonar concluindo em até 10 minutos e bloqueando com cobertura abaixo de 90%
+- [X] T040 [US5] Criar `.github/workflows/ci.yml` com o step de build (`dotnet restore` + `dotnet build`), disparado em push e pull request
+- [X] T041 [US5] Adicionar ao `.github/workflows/ci.yml` o step de test, rodando `dotnet test --collect:"XPlat Code Coverage"` e publicando o relatório Cobertura como artefato
+- [X] T042 [US5] Adicionar ao `.github/workflows/ci.yml` o step de sonar, instalando o `dotnet-sonarscanner` e executando `begin`/`end` contra o SonarCloud com `sonar.qualitygate.wait=true`, consumindo o secret `SONAR_TOKEN`
+- [X] T043 [US5] Documentar no README.md (ver User Story 6) a configuração única necessária no SonarCloud (chave do projeto, organização, secret) para o pipeline funcionar
+- [ ] T044 [US5] Validar, seguindo o passo 6 de quickstart.md, que um Pull Request de teste mostra os checks de build, test e sonar concluindo em até 10 minutos e bloqueando com cobertura abaixo de 90% (requer PR real no GitHub — não executável nesta sessão local; pipeline já criado e revisado estruturalmente)
 
 **Checkpoint**: Pipeline de qualidade automatizado funcionando — User Story 5 entregue e
 testável independentemente.
@@ -197,10 +197,10 @@ a uma aplicação rodando localmente.
 
 ### Implementation for User Story 6
 
-- [ ] T045 [US6] Escrever no `README.md` (raiz do repositório) as seções de propósito da aplicação, stack utilizada e visão geral da arquitetura em camadas
-- [ ] T046 [US6] Escrever no `README.md` os pré-requisitos (Docker, .NET SDK) e o passo a passo de preparação do ambiente (`docker compose up`) e execução local
-- [ ] T047 [US6] Escrever no `README.md` a seção descrevendo como rodar a suíte de testes e a análise de qualidade local (SonarQube via Docker)
-- [ ] T048 [US6] Validar, seguindo o passo 7 de quickstart.md, que uma pessoa sem contexto prévio segue apenas o README e chega à aplicação rodando
+- [X] T045 [US6] Escrever no `README.md` (raiz do repositório) as seções de propósito da aplicação, stack utilizada e visão geral da arquitetura em camadas
+- [X] T046 [US6] Escrever no `README.md` os pré-requisitos (Docker, .NET SDK) e o passo a passo de preparação do ambiente (`docker compose up`) e execução local
+- [X] T047 [US6] Escrever no `README.md` a seção descrevendo como rodar a suíte de testes e a análise de qualidade local (SonarQube via Docker)
+- [ ] T048 [US6] Validar, seguindo o passo 7 de quickstart.md, que uma pessoa sem contexto prévio segue apenas o README e chega à aplicação rodando (validação com pessoa real fora do escopo desta sessão; conteúdo do README revisado contra os passos do quickstart)
 
 **Checkpoint**: Onboarding autoguiado validado — User Story 6 entregue e testável
 independentemente.
@@ -211,10 +211,10 @@ independentemente.
 
 **Purpose**: Melhorias que afetam múltiplas user stories
 
-- [ ] T049 [P] Configurar logging estruturado com `Serilog.AspNetCore` + `Serilog.Sinks.Console`, substituindo o logging padrão em `src/SalesApi.Api/Program.cs`
-- [ ] T050 Adicionar enricher/middleware de correlation id ao pipeline do Serilog em `src/SalesApi.Api/Program.cs` (depende de T049 — mesmo arquivo, não paralelizável)
-- [ ] T051 Rodar a validação completa de quickstart.md (todos os 7 passos) como checagem final de aceite
-- [ ] T052 [P] Revisar a solução contra a tabela de Constitution Check em plan.md e confirmar que nenhuma violação foi introduzida
+- [X] T049 [P] Configurar logging estruturado com `Serilog.AspNetCore` + `Serilog.Sinks.Console`, substituindo o logging padrão em `src/SalesApi.Api/Program.cs`
+- [X] T050 Adicionar enricher/middleware de correlation id ao pipeline do Serilog em `src/SalesApi.Api/Program.cs` (depende de T049 — mesmo arquivo, não paralelizável)
+- [ ] T051 Rodar a validação completa de quickstart.md (todos os 7 passos) como checagem final de aceite — passos 1-4 validados nesta sessão (docker compose up com os três serviços saudáveis; `dotnet build`; `dotnet test` com os 10 testes passando contra PostgreSQL real; `/swagger` e `/health` respondendo conforme contrato); passos 5-7 exigem ação humana fora do escopo desta sessão (login interativo no SonarQube para gerar token; abertura de PR real no GitHub; validação por pessoa sem contexto prévio)
+- [X] T052 [P] Revisar a solução contra a tabela de Constitution Check em plan.md e confirmar que nenhuma violação foi introduzida — todos os 10 princípios revisados contra a implementação final, nenhuma violação encontrada
 
 ---
 
