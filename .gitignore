@@ -1,0 +1,45 @@
+# Build artefatos do .NET
+bin/
+obj/
+out/
+publish/
+
+# Resultados de teste e cobertura
+[Tt]est[Rr]esult*/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+.nuget/
+
+# Docker
+docker/.env
+
+# SonarQube/SonarCloud
+.sonarqube/
+.scannerwork/
+
+# Segredos e ambiente
+.env
+.env.*
+!docker/.env.example
+appsettings.*.local.json
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
