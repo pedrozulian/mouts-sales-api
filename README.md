@@ -112,17 +112,25 @@ Com o SonarQube local no ar (passo 2 de "Preparando o ambiente"):
    dotnet tool install --global dotnet-sonarscanner
    ```
 
-4. Rode a análise apontando para a instância local. O parâmetro
-   `sonar.cs.cobertura.reportsPaths` é obrigatório — sem ele o SonarScanner não sabe onde
-   encontrar o relatório de cobertura gerado pelo `dotnet test`, e a cobertura aparece como
-   0% mesmo com os testes passando:
+4. Rode a análise apontando para a instância local, a partir da raiz do repositório. As
+   propriedades estáveis da análise (onde encontrar o relatório de cobertura, quais pastas
+   excluir) ficam centralizadas em [`SonarQube.Analysis.xml`](SonarQube.Analysis.xml), na raiz
+   do repositório, e são carregadas via `/s:` — tanto local quanto no CI usam o mesmo arquivo,
+   então só o `sonar.host.url` e o `sonar.token` (que mudam por ambiente) continuam na linha de
+   comando. O `/s:` precisa de **caminho absoluto**: um caminho relativo é resolvido contra o
+   diretório de trabalho interno do scanner (`.sonarqube/`), não contra o diretório onde o
+   comando é executado, e o arquivo não é encontrado:
 
    ```bash
-   dotnet sonarscanner begin /k:"mouts-sales-api" /d:sonar.host.url="http://localhost:9000" /d:sonar.token="<seu-token>" /d:sonar.cs.cobertura.reportsPaths="coverage/**/coverage.cobertura.xml"
+   dotnet sonarscanner begin /k:"mouts-sales-api" /d:sonar.host.url="http://localhost:9000" /d:sonar.token="<seu-token>" /s:"$(pwd)/SonarQube.Analysis.xml"
    dotnet build SalesApi.sln
    dotnet test SalesApi.sln --collect:"XPlat Code Coverage" --results-directory ./coverage
    dotnet sonarscanner end /d:sonar.token="<seu-token>"
    ```
+
+   > Qualquer propriedade passada via `/d:` na linha de comando tem prioridade sobre a mesma
+   > propriedade definida em `SonarQube.Analysis.xml` — então dá pra sobrescrever pontualmente
+   > sem editar o arquivo.
 
 5. Confira o resultado em `http://localhost:9000`.
 

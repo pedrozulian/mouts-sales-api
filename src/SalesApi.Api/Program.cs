@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SalesApi.Api.HealthChecks;
+using SalesApi.Api.Sales;
 using SalesApi.Application;
 using SalesApi.Infrastructure;
 using Serilog;
@@ -16,7 +17,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => options.SchemaFilter<CreateSaleRequestExampleFilter>());
 
 builder.Services
     .AddHealthChecks()
@@ -60,6 +61,8 @@ app.MapGet("/health", async (HealthCheckService healthCheckService, HttpContext 
 
     await HealthCheckResponseWriter.WriteResponse(context, report);
 });
+
+app.MapSalesEndpoints();
 
 await app.RunAsync();
 

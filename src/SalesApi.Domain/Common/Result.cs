@@ -31,3 +31,20 @@ public class Result
 
     public static Result Failure(IReadOnlyCollection<Notification> errors) => new(false, errors);
 }
+
+public sealed class Result<T> : Result
+{
+    public T? Value { get; }
+
+    private Result(bool isSuccess, T? value, IReadOnlyCollection<Notification> errors)
+        : base(isSuccess, errors)
+    {
+        Value = value;
+    }
+
+    public static Result<T> Success(T value) => new(true, value, Array.Empty<Notification>());
+
+    public static new Result<T> Failure(Notification error) => new(false, default, new[] { error });
+
+    public static new Result<T> Failure(IReadOnlyCollection<Notification> errors) => new(false, default, errors);
+}

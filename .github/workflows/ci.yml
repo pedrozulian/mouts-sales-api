@@ -61,6 +61,12 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
 
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply database migrations
+        run: dotnet ef database update --project src/SalesApi.Infrastructure --startup-project src/SalesApi.Api
+
       - name: Test
         run: >
           dotnet test ${{ env.SOLUTION }} --no-restore --configuration Release
@@ -113,8 +119,8 @@ jobs:
           /o:"${{ vars.SONAR_ORGANIZATION }}"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
-          /d:sonar.cs.cobertura.reportsPaths="coverage/**/coverage.cobertura.xml"
           /d:sonar.qualitygate.wait=true
+          /s:"${{ github.workspace }}/SonarQube.Analysis.xml"
 
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --configuration Release
