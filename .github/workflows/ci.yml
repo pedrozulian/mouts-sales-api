@@ -61,6 +61,12 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
 
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply database migrations
+        run: dotnet ef database update --project src/SalesApi.Infrastructure --startup-project src/SalesApi.Api
+
       - name: Test
         run: >
           dotnet test ${{ env.SOLUTION }} --no-restore --configuration Release
