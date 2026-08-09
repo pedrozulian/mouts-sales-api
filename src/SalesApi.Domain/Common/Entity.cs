@@ -2,7 +2,11 @@ namespace SalesApi.Domain.Common;
 
 public abstract class Entity
 {
+    private readonly List<DomainEvent> _domainEvents = new();
+
     public Guid Id { get; protected init; }
+
+    public IReadOnlyCollection<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected Entity(Guid id)
     {
@@ -12,6 +16,10 @@ public abstract class Entity
     protected Entity()
     {
     }
+
+    protected void AddDomainEvent(DomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public override bool Equals(object? obj)
     {
