@@ -1,8 +1,10 @@
 using Mapster;
 using MediatR;
+using SalesApi.Application.Common.Dtos;
 using SalesApi.Application.Sales.Create;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Application.Sales.Get;
+using SalesApi.Application.Sales.List;
 
 namespace SalesApi.Api.Sales;
 
@@ -29,6 +31,16 @@ public static class SalesEndpoints
                 "calculados — sem recalcular nada e sem consultar nenhum outro serviço.")
             .Produces<SaleResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+
+        app.MapGet("/api/sales", ListSales)
+            .WithName("ListSales")
+            .WithTags("Sales")
+            .WithSummary("Lista vendas de forma paginada")
+            .WithDescription(
+                "Retorna uma página de vendas em forma resumida (sem os itens), ordenada por data decrescente, " +
+                "com filtros opcionais por cliente, filial e situação de cancelamento.")
+            .Produces<PagedResult<SaleSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest);
 
         return app;
     }
@@ -63,6 +75,30 @@ public static class SalesEndpoints
         if (!result.IsSuccess)
         {
             return Results.NotFound(new
+            {
+                errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
+            });
+        }
+
+        return Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> ListSales(
+        string? page,
+        string? pageSize,
+        string? customerId,
+        string? branchId,
+        string? isCancelled,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var query = new ListSalesQuery(page, pageSize, customerId, branchId, isCancelled);
+
+        var result = await sender.Send(query, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return Results.BadRequest(new
             {
                 errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
             });
