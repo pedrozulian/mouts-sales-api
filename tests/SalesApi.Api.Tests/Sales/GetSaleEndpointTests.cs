@@ -60,7 +60,7 @@ public class GetSaleEndpointTests : IClassFixture<WebApplicationFactory<Program>
         };
     }
 
-    private async Task<SaleResponse> CreateSaleAsync(HttpClient client, object? payload = null)
+    private static async Task<SaleResponse> CreateSaleAsync(HttpClient client, object? payload = null)
     {
         var createResponse = await client.PostAsJsonAsync("/api/sales", payload ?? ValidPayload());
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
