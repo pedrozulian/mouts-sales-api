@@ -92,4 +92,38 @@ public class UpdateSaleCommandHandlerTests
         Assert.False(result.IsSuccess);
         Assert.Contains(result.Errors, e => e.Key == "id");
     }
+
+    [Fact]
+    public async Task Handle_ComConflitoDeConcorrencia_DeveRetornarFailureComChaveSale()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options;
+
+        await using var seedContext = new AppDbContext(options, new NoOpPublisher());
+        var product = new ExternalReference(Guid.NewGuid(), "Teclado Mecânico K68");
+        var sale = await SeedSaleAsync(seedContext, product);
+        var itemId = sale.Items.Single().Id;
+
+        // Simula uma segunda requisição que carregou a mesma venda antes de outra requisição
+        // concorrente (ex.: um cancelamento) já ter persistido sua mudança — o EF Core InMemory
+        // não gera um novo valor de xmin sozinho a cada SaveChanges (ao contrário do PostgreSQL
+        // real), então o OriginalValue do token de concorrência é forçado manualmente para
+        // reproduzir o conflito que o xmin real detectaria (ver research.md, seção 3).
+        await using var context = new AppDbContext(options, new NoOpPublisher());
+        var tracked = await context.Sales.Include(s => s.Items).SingleAsync(s => s.Id == sale.Id);
+        context.Entry(tracked).Property("xmin").OriginalValue = (uint)999;
+
+        var handler = new UpdateSaleCommandHandler(context, NullLogger<UpdateSaleCommandHandler>.Instance);
+        var command = new UpdateSaleCommand(
+            sale.Id,
+            sale.SaleDate,
+            new ExternalReferenceRequest(sale.Customer.Id, sale.Customer.Name),
+            new ExternalReferenceRequest(sale.Branch.Id, sale.Branch.Name),
+            new[] { new SaleItemChangeRequest(itemId, new ExternalReferenceRequest(product.Id, product.Name), 12, 250.00m) });
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "sale");
+    }
 }

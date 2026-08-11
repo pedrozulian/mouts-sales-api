@@ -44,7 +44,18 @@ public sealed class UpdateSaleCommandHandler : IRequestHandler<UpdateSaleCommand
             return Result<SaleResponse>.Failure(result.Errors);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _logger.LogWarning(
+                "Conflito de concorrência ao alterar a venda {SaleId} — outra requisição já a cancelou.",
+                request.Id);
+
+            return Result<SaleResponse>.Failure(new Notification("sale", "Venda cancelada não pode ser alterada."));
+        }
 
         _logger.LogInformation("Venda {SaleNumber} ({SaleId}) alterada com sucesso.", sale.SaleNumber, sale.Id);
 

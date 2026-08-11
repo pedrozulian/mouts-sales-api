@@ -37,7 +37,18 @@ public sealed class CancelSaleCommandHandler : IRequestHandler<CancelSaleCommand
             return Result.Failure(result.Errors);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _logger.LogWarning(
+                "Conflito de concorrência ao cancelar a venda {SaleId} — outra requisição já a cancelou.",
+                request.Id);
+
+            return Result.Failure(new Notification("sale", "Venda já está cancelada."));
+        }
 
         _logger.LogInformation("Venda {SaleNumber} ({SaleId}) cancelada com sucesso.", sale.SaleNumber, sale.Id);
 
