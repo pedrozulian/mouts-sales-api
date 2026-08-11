@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+using SalesApi.Api.Tests.Infrastructure;
 
 namespace SalesApi.Api.Tests;
 
-public class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
+public class SmokeTests : IClassFixture<SalesApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly SalesApiFactory _factory;
 
-    public SmokeTests(WebApplicationFactory<Program> factory)
+    public SmokeTests(SalesApiFactory factory)
     {
         _factory = factory;
     }
