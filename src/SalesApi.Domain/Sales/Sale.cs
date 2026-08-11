@@ -102,6 +102,27 @@ public sealed class Sale : Entity
         return Result<Sale>.Success(this);
     }
 
+    public Result<Sale> Cancel()
+    {
+        if (IsCancelled)
+        {
+            return Result<Sale>.Failure(new Notification("sale", "Venda já está cancelada."));
+        }
+
+        foreach (var item in _items.Where(i => !i.IsCancelled))
+        {
+            item.Cancel();
+        }
+
+        IsCancelled = true;
+        TotalAmount = 0m;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SaleCancelled(Id, SaleNumber));
+
+        return Result<Sale>.Success(this);
+    }
+
     private ItemReconciliation ReconcileItems(IReadOnlyCollection<SaleItemChangeInput> items, List<Notification> errors)
     {
         var reconciliation = new ItemReconciliation();
