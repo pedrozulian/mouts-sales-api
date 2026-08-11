@@ -2,6 +2,7 @@ using Mapster;
 using MediatR;
 using SalesApi.Application.Common.Dtos;
 using SalesApi.Application.Sales.Cancel;
+using SalesApi.Application.Sales.CancelItem;
 using SalesApi.Application.Sales.Create;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Application.Sales.Get;
@@ -65,6 +66,18 @@ public static class SalesEndpoints
             .WithDescription(
                 "Cancela logicamente uma venda ativa e todos os seus itens ainda ativos, zerando o total geral. " +
                 "O registro nunca é removido fisicamente e permanece consultável.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        app.MapDelete("/api/sales/{id:guid}/items/{itemId:guid}", CancelSaleItem)
+            .WithName("CancelSaleItem")
+            .WithTags(Tag)
+            .WithSummary("Cancela um item específico de uma venda")
+            .WithDescription(
+                "Cancela logicamente um item ativo de uma venda ativa, recalculando o total geral a partir dos " +
+                "itens ainda ativos. Quando não resta nenhum item ativo, a venda inteira também é cancelada " +
+                "automaticamente, na mesma operação.")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
@@ -168,6 +181,26 @@ public static class SalesEndpoints
             var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
 
             return result.Errors.Any(error => error.Key == "id")
+                ? Results.NotFound(new { errors })
+                : Results.BadRequest(new { errors });
+        }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> CancelSaleItem(
+        Guid id,
+        Guid itemId,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new CancelSaleItemCommand(id, itemId), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
+
+            return result.Errors.Any(error => error.Key == "id" || error.Key == "itemId")
                 ? Results.NotFound(new { errors })
                 : Results.BadRequest(new { errors });
         }
