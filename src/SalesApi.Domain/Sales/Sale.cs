@@ -72,6 +72,191 @@ public sealed class Sale : Entity
         return Result<Sale>.Success(sale);
     }
 
+    public Result<Sale> Update(
+        ExternalReference customer,
+        ExternalReference branch,
+        DateTime? saleDate,
+        IReadOnlyCollection<SaleItemChangeInput> items)
+    {
+        if (IsCancelled)
+        {
+            return Result<Sale>.Failure(new Notification("sale", "Venda cancelada não pode ser alterada."));
+        }
+
+        var errors = new List<Notification>();
+
+        ValidateCustomer(customer, errors);
+        ValidateBranch(branch, errors);
+        ValidateSaleDate(saleDate, errors);
+        ValidateItemsPresence(items, errors);
+
+        var reconciliation = ReconcileItems(items ?? Array.Empty<SaleItemChangeInput>(), errors);
+
+        if (errors.Count > 0)
+        {
+            return Result<Sale>.Failure(errors);
+        }
+
+        ApplyReconciliation(customer, branch, saleDate!.Value, reconciliation);
+
+        return Result<Sale>.Success(this);
+    }
+
+    private ItemReconciliation ReconcileItems(IReadOnlyCollection<SaleItemChangeInput> items, List<Notification> errors)
+    {
+        var reconciliation = new ItemReconciliation();
+        var seenProducts = new HashSet<Guid>();
+        var index = 0;
+
+        foreach (var itemInput in items)
+        {
+            if (itemInput.Id is Guid id)
+            {
+                ReconcileExistingItem(id, itemInput, index, seenProducts, reconciliation, errors);
+            }
+            else
+            {
+                ReconcileNewItem(itemInput, index, seenProducts, reconciliation, errors);
+            }
+
+            index++;
+        }
+
+        return reconciliation;
+    }
+
+    private void ReconcileExistingItem(
+        Guid id,
+        SaleItemChangeInput itemInput,
+        int index,
+        HashSet<Guid> seenProducts,
+        ItemReconciliation reconciliation,
+        List<Notification> errors)
+    {
+        reconciliation.ReferencedIds.Add(id);
+        var existingItem = _items.FirstOrDefault(i => i.Id == id);
+
+        if (existingItem is null || existingItem.IsCancelled)
+        {
+            errors.Add(new Notification(
+                $"items[{index}].id",
+                existingItem is null ? "Item não pertence a esta venda." : "Item já está cancelado e não pode ser alterado."));
+
+            return;
+        }
+
+        if (itemInput.Product is null || existingItem.Product.Id != itemInput.Product.Id)
+        {
+            errors.Add(new Notification($"items[{index}].product.id", "Produto de um item existente não pode ser alterado."));
+
+            return;
+        }
+
+        if (itemInput.Quantity > 20)
+        {
+            errors.Add(new Notification($"items[{index}].quantity", "Não é possível vender mais de 20 unidades do mesmo produto."));
+        }
+        else if (itemInput.Quantity < 1)
+        {
+            errors.Add(new Notification($"items[{index}].quantity", "A quantidade deve ser de ao menos 1 unidade."));
+        }
+        else if (itemInput.UnitPrice <= 0)
+        {
+            errors.Add(new Notification($"items[{index}].unitPrice", "O preço unitário deve ser maior que zero."));
+        }
+        else
+        {
+            reconciliation.Updates.Add((existingItem, itemInput.Quantity, itemInput.UnitPrice));
+        }
+
+        if (!seenProducts.Add(existingItem.Product.Id))
+        {
+            errors.Add(new Notification($"items[{index}].product.id", "Produto duplicado entre os itens da venda."));
+        }
+    }
+
+    private static void ReconcileNewItem(
+        SaleItemChangeInput itemInput,
+        int index,
+        HashSet<Guid> seenProducts,
+        ItemReconciliation reconciliation,
+        List<Notification> errors)
+    {
+        var itemResult = SaleItem.Create(itemInput.Product, itemInput.Quantity, itemInput.UnitPrice);
+
+        if (itemResult.IsSuccess)
+        {
+            reconciliation.NewItems.Add(itemResult.Value!);
+        }
+        else
+        {
+            errors.AddRange(itemResult.Errors.Select(e => new Notification($"items[{index}].{e.Key}", e.Message)));
+        }
+
+        if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty && !seenProducts.Add(itemInput.Product.Id))
+        {
+            errors.Add(new Notification($"items[{index}].product.id", "Produto duplicado entre os itens da venda."));
+        }
+    }
+
+    private void ApplyReconciliation(
+        ExternalReference customer,
+        ExternalReference branch,
+        DateTime saleDate,
+        ItemReconciliation reconciliation)
+    {
+        Customer = customer;
+        Branch = branch;
+        SaleDate = saleDate;
+
+        var implicitlyCancelledItems = _items
+            .Where(i => !i.IsCancelled && !reconciliation.ReferencedIds.Contains(i.Id))
+            .ToList();
+
+        foreach (var (item, quantity, unitPrice) in reconciliation.Updates)
+        {
+            item.ApplyChange(quantity, unitPrice);
+        }
+
+        _items.AddRange(reconciliation.NewItems);
+
+        foreach (var item in implicitlyCancelledItems)
+        {
+            item.Cancel();
+            AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+        }
+
+        TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SaleModified(Id, SaleNumber, TotalAmount));
+    }
+
+    private static void ValidateSaleDate(DateTime? saleDate, List<Notification> errors)
+    {
+        if (saleDate is null)
+        {
+            errors.Add(new Notification("saleDate", "Data da venda é obrigatória."));
+        }
+    }
+
+    private static void ValidateItemsPresence(IReadOnlyCollection<SaleItemChangeInput>? items, List<Notification> errors)
+    {
+        if (items is null || items.Count == 0)
+        {
+            errors.Add(new Notification("items", "A venda deve ter ao menos um item."));
+        }
+    }
+
+    private sealed class ItemReconciliation
+    {
+        public List<(SaleItem Item, int Quantity, decimal UnitPrice)> Updates { get; } = new();
+
+        public List<SaleItem> NewItems { get; } = new();
+
+        public HashSet<Guid> ReferencedIds { get; } = new();
+    }
+
     private static void ValidateCustomer(ExternalReference customer, List<Notification> errors)
     {
         if (customer is null || customer.Id == Guid.Empty || string.IsNullOrWhiteSpace(customer.Name))

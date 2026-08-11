@@ -35,6 +35,22 @@ public sealed class SaleItem : Entity
         IsCancelled = false;
     }
 
+    public void ApplyChange(int quantity, decimal unitPrice)
+    {
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+        DiscountPercentage = DiscountPolicy.GetPercentage(quantity);
+
+        var grossAmount = unitPrice * quantity;
+        DiscountAmount = grossAmount * DiscountPercentage;
+        TotalAmount = grossAmount - DiscountAmount;
+    }
+
+    public void Cancel()
+    {
+        IsCancelled = true;
+    }
+
     public static Result<SaleItem> Create(ExternalReference product, int quantity, decimal unitPrice)
     {
         var errors = new List<Notification>();
