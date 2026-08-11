@@ -1,6 +1,7 @@
 using Mapster;
 using MediatR;
 using SalesApi.Application.Common.Dtos;
+using SalesApi.Application.Sales.Cancel;
 using SalesApi.Application.Sales.Create;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Application.Sales.Get;
@@ -54,6 +55,17 @@ public static class SalesEndpoints
                 "com id conhecido é atualizado, item sem id é adicionado, item ausente do corpo é " +
                 "cancelado logicamente.")
             .Produces<SaleResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        app.MapDelete("/api/sales/{id:guid}", CancelSale)
+            .WithName("CancelSale")
+            .WithTags(Tag)
+            .WithSummary("Cancela uma venda existente")
+            .WithDescription(
+                "Cancela logicamente uma venda ativa e todos os seus itens ainda ativos, zerando o total geral. " +
+                "O registro nunca é removido fisicamente e permanece consultável.")
+            .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
 
@@ -142,5 +154,24 @@ public static class SalesEndpoints
         }
 
         return Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> CancelSale(
+        Guid id,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new CancelSaleCommand(id), cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
+
+            return result.Errors.Any(error => error.Key == "id")
+                ? Results.NotFound(new { errors })
+                : Results.BadRequest(new { errors });
+        }
+
+        return Results.NoContent();
     }
 }

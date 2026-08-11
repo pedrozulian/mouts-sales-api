@@ -12,6 +12,14 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
 
         builder.HasKey(s => s.Id);
 
+        // xmin do PostgreSQL como token de concorrência otimista do EF Core — coluna de sistema,
+        // sem exigir nenhuma migration. Garante que, entre duas escritas concorrentes na mesma
+        // venda (ex.: dois cancelamentos, ou um cancelamento e uma alteração), a segunda a chegar
+        // recebe DbUpdateConcurrencyException em vez de sobrescrever silenciosamente a primeira
+        // (ver specs/006-cancelar-venda/research.md, seção 3). `UseXminAsConcurrencyToken()` está
+        // obsoleto no provider Npgsql atual em favor da forma padrão do EF Core abaixo.
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.Ignore(s => s.DomainEvents);
 
         builder.Property(s => s.SaleNumber)
