@@ -1,19 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SalesApi.Api.Tests.Infrastructure;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Domain.Sales;
 using SalesApi.Infrastructure.Persistence;
 
 namespace SalesApi.Api.Tests.Sales;
 
-public class GetSaleEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class GetSaleEndpointTests : IClassFixture<SalesApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly SalesApiFactory _factory;
 
-    public GetSaleEndpointTests(WebApplicationFactory<Program> factory)
+    public GetSaleEndpointTests(SalesApiFactory factory)
     {
         _factory = factory;
     }

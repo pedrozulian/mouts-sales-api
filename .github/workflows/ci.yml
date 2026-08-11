@@ -29,26 +29,13 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.SOLUTION }} --no-restore --configuration Release
 
+  # SalesApi.Api.Tests sobe seu próprio Postgres efêmero via Testcontainers (um container por
+  # classe de teste, aplicando as migrations automaticamente) — nenhum serviço postgres nem
+  # passo de migration é necessário aqui.
   test:
     name: test
     runs-on: ubuntu-latest
     needs: build
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: salesapi
-          POSTGRES_USER: salesapi
-          POSTGRES_PASSWORD: salesapi
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U salesapi -d salesapi"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=salesapi;Username=salesapi;Password=salesapi"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,12 +47,6 @@ jobs:
 
       - name: Restore
         run: dotnet restore ${{ env.SOLUTION }}
-
-      - name: Install EF Core tools
-        run: dotnet tool install --global dotnet-ef
-
-      - name: Apply database migrations
-        run: dotnet ef database update --project src/SalesApi.Infrastructure --startup-project src/SalesApi.Api
 
       - name: Test
         run: >

@@ -97,8 +97,10 @@ dotnet test SalesApi.sln --collect:"XPlat Code Coverage"
 Executa os três projetos de teste (`SalesApi.Domain.Tests`, `SalesApi.Application.Tests`,
 `SalesApi.Api.Tests`) e gera o relatório de cobertura em formato Cobertura XML.
 
-> Os testes de integração (ex.: conexão do `AppDbContext`, `/health`) exigem que o
-> PostgreSQL do passo 2 acima esteja em execução.
+> Os testes de integração (`SalesApi.Api.Tests`) sobem seu próprio PostgreSQL efêmero via
+> [Testcontainers](https://dotnet.testcontainers.org/) — um container isolado por classe de
+> teste, migrado automaticamente e descartado ao final. Não usam nem exigem o PostgreSQL do
+> `docker compose` (passo 2 acima); a única dependência é ter o Docker em execução na máquina.
 
 ## Análise de qualidade local (SonarQube via Docker)
 

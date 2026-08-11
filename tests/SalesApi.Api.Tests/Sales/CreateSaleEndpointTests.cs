@@ -2,18 +2,18 @@ using System.Net;
 using System.Net.Http.Json;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using SalesApi.Api.Tests.Infrastructure;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Domain.Sales.Events;
 
 namespace SalesApi.Api.Tests.Sales;
 
-public class CreateSaleEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class CreateSaleEndpointTests : IClassFixture<SalesApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly SalesApiFactory _factory;
 
-    public CreateSaleEndpointTests(WebApplicationFactory<Program> factory)
+    public CreateSaleEndpointTests(SalesApiFactory factory)
     {
         _factory = factory;
     }

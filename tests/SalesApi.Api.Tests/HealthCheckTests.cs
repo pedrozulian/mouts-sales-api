@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+using SalesApi.Api.Tests.Infrastructure;
 
 namespace SalesApi.Api.Tests;
 
-public class HealthCheckTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthCheckTests : IClassFixture<SalesApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly SalesApiFactory _factory;
 
-    public HealthCheckTests(WebApplicationFactory<Program> factory)
+    public HealthCheckTests(SalesApiFactory factory)
     {
         _factory = factory;
     }

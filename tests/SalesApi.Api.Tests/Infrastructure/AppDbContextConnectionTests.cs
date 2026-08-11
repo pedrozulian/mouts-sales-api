@@ -4,8 +4,15 @@ using SalesApi.Infrastructure.Persistence;
 
 namespace SalesApi.Api.Tests.Infrastructure;
 
-public class AppDbContextConnectionTests
+public class AppDbContextConnectionTests : IClassFixture<SalesApiFactory>
 {
+    private readonly SalesApiFactory _factory;
+
+    public AppDbContextConnectionTests(SalesApiFactory factory)
+    {
+        _factory = factory;
+    }
+
     private sealed class NoOpPublisher : IPublisher
     {
         public Task Publish(object notification, CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -18,11 +25,8 @@ public class AppDbContextConnectionTests
     [Fact]
     public async Task AppDbContext_DeveConseguirAbrirConexaoComPostgres()
     {
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=salesapi;Username=salesapi;Password=salesapi";
-
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(_factory.ConnectionString)
             .Options;
 
         await using var dbContext = new AppDbContext(options, new NoOpPublisher());

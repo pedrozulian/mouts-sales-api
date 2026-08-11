@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+using SalesApi.Api.Tests.Infrastructure;
 
 namespace SalesApi.Api.Tests;
 
-public class SwaggerTests : IClassFixture<WebApplicationFactory<Program>>
+public class SwaggerTests : IClassFixture<SalesApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly SalesApiFactory _factory;
 
-    public SwaggerTests(WebApplicationFactory<Program> factory)
+    public SwaggerTests(SalesApiFactory factory)
     {
         _factory = factory;
     }

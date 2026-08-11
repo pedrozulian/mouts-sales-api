@@ -12,6 +12,13 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
 
         builder.HasKey(i => i.Id);
 
+        // Id é sempre gerado pela aplicação (Guid.NewGuid() no construtor), nunca pelo EF Core ou
+        // pelo banco. Sem isso, itens novos adicionados à coleção de uma Sale já rastreada (caso de
+        // Sale.Update) são erroneamente detectados como "Unchanged"/"Modified" em vez de "Added",
+        // pois o Id já vem preenchido — gerando DbUpdateConcurrencyException (0 linhas afetadas) ao
+        // tentar UPDATE em uma linha que ainda não existe.
+        builder.Property(i => i.Id).ValueGeneratedNever();
+
         builder.Ignore(i => i.DomainEvents);
 
         builder.Property(i => i.Quantity).IsRequired();

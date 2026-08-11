@@ -5,16 +5,19 @@ using SalesApi.Application.Sales.Create;
 using SalesApi.Application.Sales.Dtos;
 using SalesApi.Application.Sales.Get;
 using SalesApi.Application.Sales.List;
+using SalesApi.Application.Sales.Update;
 
 namespace SalesApi.Api.Sales;
 
 public static class SalesEndpoints
 {
+    private const string Tag = "Sales";
+
     public static IEndpointRouteBuilder MapSalesEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/api/sales", CreateSale)
             .WithName("CreateSale")
-            .WithTags("Sales")
+            .WithTags(Tag)
             .WithSummary("Registra uma nova venda")
             .WithDescription(
                 "Recebe cliente, filial e itens (produto, quantidade, preço unitário), calcula o desconto " +
@@ -24,7 +27,7 @@ public static class SalesEndpoints
 
         app.MapGet("/api/sales/{id:guid}", GetSale)
             .WithName("GetSale")
-            .WithTags("Sales")
+            .WithTags(Tag)
             .WithSummary("Consulta uma venda pelo identificador")
             .WithDescription(
                 "Retorna a venda completa — cliente, filial, itens ativos e cancelados, descontos e totais já " +
@@ -34,13 +37,25 @@ public static class SalesEndpoints
 
         app.MapGet("/api/sales", ListSales)
             .WithName("ListSales")
-            .WithTags("Sales")
+            .WithTags(Tag)
             .WithSummary("Lista vendas de forma paginada")
             .WithDescription(
                 "Retorna uma página de vendas em forma resumida (sem os itens), ordenada por data decrescente, " +
                 "com filtros opcionais por cliente, filial e situação de cancelamento.")
             .Produces<PagedResult<SaleSummaryResponse>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest);
+
+        app.MapPut("/api/sales/{id:guid}", UpdateSale)
+            .WithName("UpdateSale")
+            .WithTags(Tag)
+            .WithSummary("Altera uma venda existente")
+            .WithDescription(
+                "Substitui o cabeçalho (cliente, filial, data) de uma venda ativa e reconcilia seus itens: item " +
+                "com id conhecido é atualizado, item sem id é adicionado, item ausente do corpo é " +
+                "cancelado logicamente.")
+            .Produces<SaleResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -102,6 +117,28 @@ public static class SalesEndpoints
             {
                 errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
             });
+        }
+
+        return Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> UpdateSale(
+        Guid id,
+        UpdateSaleRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var command = request.Adapt<UpdateSaleCommand>() with { Id = id };
+
+        var result = await sender.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
+
+            return result.Errors.Any(error => error.Key == "id")
+                ? Results.NotFound(new { errors })
+                : Results.BadRequest(new { errors });
         }
 
         return Results.Ok(result.Value);
