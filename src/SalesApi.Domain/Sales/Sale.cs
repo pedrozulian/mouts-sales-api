@@ -123,6 +123,34 @@ public sealed class Sale : Entity
         return Result<Sale>.Success(this);
     }
 
+    public Result<Sale> CancelItem(Guid itemId)
+    {
+        if (IsCancelled)
+        {
+            return Result<Sale>.Failure(new Notification("sale", "Venda cancelada não pode ter itens cancelados."));
+        }
+
+        var item = _items.FirstOrDefault(i => i.Id == itemId);
+
+        if (item is null)
+        {
+            return Result<Sale>.Failure(new Notification("itemId", "Item não encontrado nesta venda."));
+        }
+
+        if (item.IsCancelled)
+        {
+            return Result<Sale>.Failure(new Notification("item", "Item já está cancelado."));
+        }
+
+        item.Cancel();
+        TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+
+        return _items.All(i => i.IsCancelled) ? Cancel() : Result<Sale>.Success(this);
+    }
+
     private ItemReconciliation ReconcileItems(IReadOnlyCollection<SaleItemChangeInput> items, List<Notification> errors)
     {
         var reconciliation = new ItemReconciliation();

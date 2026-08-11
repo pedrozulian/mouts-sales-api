@@ -639,4 +639,189 @@ public class SaleTests
         Assert.False(result.IsSuccess);
         Assert.Empty(sale.DomainEvents);
     }
+
+    // --- CancelItem (007-cancelar-item-da-venda) ---
+
+    [Fact]
+    public void CancelItem_ComItemAtivoEntreOutrosAtivos_DeveCancelarApenasEsseItemERecalcularTotal()
+    {
+        var product1 = Product("Teclado Mecânico K68");
+        var product2 = Product("Mousepad XL");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 1, 250.00m),
+            new SaleItemInput(product2, 2, 49.90m));
+        var item1 = sale.Items.Single(i => i.Product.Id == product1.Id);
+        var item2 = sale.Items.Single(i => i.Product.Id == product2.Id);
+
+        var result = sale.CancelItem(item1.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(item1.IsCancelled);
+        Assert.False(item2.IsCancelled);
+        Assert.False(sale.IsCancelled);
+        Assert.Equal(item2.TotalAmount, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void CancelItem_ComItemJaCanceladoIndividualmenteEntreOutros_DeveManterInalteradoAoCancelarOutroItem()
+    {
+        var product1 = Product("Teclado Mecânico K68");
+        var product2 = Product("Mousepad XL");
+        var product3 = Product("Fone P2");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 1, 250.00m),
+            new SaleItemInput(product2, 2, 49.90m),
+            new SaleItemInput(product3, 1, 29.90m));
+        var item1 = sale.Items.Single(i => i.Product.Id == product1.Id);
+        var item2 = sale.Items.Single(i => i.Product.Id == product2.Id);
+        var item3 = sale.Items.Single(i => i.Product.Id == product3.Id);
+        var firstCancel = sale.CancelItem(item1.Id);
+        Assert.True(firstCancel.IsSuccess);
+
+        var result = sale.CancelItem(item2.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(item1.IsCancelled);
+        Assert.True(item2.IsCancelled);
+        Assert.False(item3.IsCancelled);
+        Assert.Equal(item3.TotalAmount, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void CancelItem_NoUnicoItemAtivo_DeveCancelarItemEVendaEZerarTotal()
+    {
+        var sale = CreateSale(new SaleItemInput(Product(), 2, 250.00m));
+        var item = sale.Items.Single();
+
+        var result = sale.CancelItem(item.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(item.IsCancelled);
+        Assert.True(sale.IsCancelled);
+        Assert.Equal(0m, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void CancelItem_NoUltimoItemAtivoComOutrosJaCanceladosIndividualmente_DeveCancelarAVenda()
+    {
+        var product1 = Product("Teclado Mecânico K68");
+        var product2 = Product("Mousepad XL");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 1, 250.00m),
+            new SaleItemInput(product2, 2, 49.90m));
+        var item1 = sale.Items.Single(i => i.Product.Id == product1.Id);
+        var item2 = sale.Items.Single(i => i.Product.Id == product2.Id);
+        var firstCancel = sale.CancelItem(item1.Id);
+        Assert.True(firstCancel.IsSuccess);
+        Assert.False(sale.IsCancelled);
+
+        var result = sale.CancelItem(item2.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(item2.IsCancelled);
+        Assert.True(sale.IsCancelled);
+        Assert.Equal(0m, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void CancelItem_ComVendaJaCancelada_DeveFalharComChaveSaleSemMutarNada()
+    {
+        var sale = CreateSale(new SaleItemInput(Product(), 2, 250.00m));
+        var item = sale.Items.Single();
+        ForceCancelled(sale);
+        var totalAntes = sale.TotalAmount;
+
+        var result = sale.CancelItem(item.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "sale");
+        Assert.False(item.IsCancelled);
+        Assert.Equal(totalAntes, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void CancelItem_ComItemIdInexistenteNaVenda_DeveFalharComChaveItemId()
+    {
+        var sale = CreateSale(new SaleItemInput(Product(), 2, 250.00m));
+
+        var result = sale.CancelItem(Guid.NewGuid());
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "itemId");
+    }
+
+    [Fact]
+    public void CancelItem_ComItemJaCancelado_DeveFalharComChaveItemSemAlterarTotalNemRegistrarEvento()
+    {
+        var product1 = Product("Teclado Mecânico K68");
+        var product2 = Product("Mousepad XL");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 1, 250.00m),
+            new SaleItemInput(product2, 2, 49.90m));
+        var item1 = sale.Items.Single(i => i.Product.Id == product1.Id);
+        var firstCancel = sale.CancelItem(item1.Id);
+        Assert.True(firstCancel.IsSuccess);
+        var totalAntes = sale.TotalAmount;
+        sale.ClearDomainEvents();
+
+        var result = sale.CancelItem(item1.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "item");
+        Assert.Equal(totalAntes, sale.TotalAmount);
+        Assert.Empty(sale.DomainEvents);
+    }
+
+    [Fact]
+    public void CancelItem_ComSucessoSemEsgotarItensAtivos_DeveRegistrarApenasUmItemCancelled()
+    {
+        var product1 = Product("Teclado Mecânico K68");
+        var product2 = Product("Mousepad XL");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 1, 250.00m),
+            new SaleItemInput(product2, 2, 49.90m));
+        var item1 = sale.Items.Single(i => i.Product.Id == product1.Id);
+        sale.ClearDomainEvents();
+
+        var result = sale.CancelItem(item1.Id);
+
+        Assert.True(result.IsSuccess);
+        var domainEvent = Assert.Single(sale.DomainEvents);
+        var itemCancelled = Assert.IsType<ItemCancelled>(domainEvent);
+        Assert.Equal(sale.Id, itemCancelled.SaleId);
+        Assert.Equal(item1.Id, itemCancelled.SaleItemId);
+        Assert.Equal(product1.Id, itemCancelled.ProductId);
+        Assert.Equal(item1.Quantity, itemCancelled.Quantity);
+    }
+
+    [Fact]
+    public void CancelItem_NoUltimoItemAtivo_DeveRegistrarItemCancelledESaleCancelled()
+    {
+        var sale = CreateSale(new SaleItemInput(Product(), 2, 250.00m));
+        var item = sale.Items.Single();
+        sale.ClearDomainEvents();
+
+        var result = sale.CancelItem(item.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, sale.DomainEvents.Count);
+        var itemCancelled = Assert.Single(sale.DomainEvents.OfType<ItemCancelled>());
+        Assert.Equal(item.Id, itemCancelled.SaleItemId);
+        var saleCancelled = Assert.Single(sale.DomainEvents.OfType<SaleCancelled>());
+        Assert.Equal(sale.Id, saleCancelled.SaleId);
+    }
+
+    [Fact]
+    public void CancelItem_QuandoRejeitado_NaoDeveRegistrarNenhumEvento()
+    {
+        var sale = CreateSale(new SaleItemInput(Product(), 2, 250.00m));
+        ForceCancelled(sale);
+        sale.ClearDomainEvents();
+        var itemId = sale.Items.Single().Id;
+
+        var result = sale.CancelItem(itemId);
+
+        Assert.False(result.IsSuccess);
+        Assert.Empty(sale.DomainEvents);
+    }
 }
