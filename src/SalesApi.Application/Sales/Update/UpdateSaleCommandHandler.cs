@@ -48,9 +48,10 @@ public sealed class UpdateSaleCommandHandler : IRequestHandler<UpdateSaleCommand
         {
             await _context.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException exception)
         {
             _logger.LogWarning(
+                exception,
                 "Conflito de concorrência ao alterar a venda {SaleId} — outra requisição já a cancelou.",
                 request.Id);
 
