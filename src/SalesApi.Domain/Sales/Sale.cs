@@ -201,17 +201,11 @@ public sealed class Sale : Entity
             return;
         }
 
-        if (itemInput.Quantity > 20)
+        var changeErrors = SaleItem.ValidateChange(itemInput.Quantity, itemInput.UnitPrice);
+
+        if (changeErrors.Count > 0)
         {
-            errors.Add(new Notification($"items[{index}].quantity", "Não é possível vender mais de 20 unidades do mesmo produto."));
-        }
-        else if (itemInput.Quantity < 1)
-        {
-            errors.Add(new Notification($"items[{index}].quantity", "A quantidade deve ser de ao menos 1 unidade."));
-        }
-        else if (itemInput.UnitPrice <= 0)
-        {
-            errors.Add(new Notification($"items[{index}].unitPrice", "O preço unitário deve ser maior que zero."));
+            errors.AddRange(changeErrors.Select(e => new Notification($"items[{index}].{e.Key}", e.Message)));
         }
         else
         {

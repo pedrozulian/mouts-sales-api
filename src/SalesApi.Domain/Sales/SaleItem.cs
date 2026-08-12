@@ -60,6 +60,22 @@ public sealed class SaleItem : Entity
             errors.Add(new Notification("product", "Produto inválido: id e nome são obrigatórios."));
         }
 
+        errors.AddRange(ValidateChange(quantity, unitPrice));
+
+        if (errors.Count > 0)
+        {
+            return Result<SaleItem>.Failure(errors);
+        }
+
+        var item = new SaleItem(Guid.NewGuid(), product!, quantity, unitPrice);
+
+        return Result<SaleItem>.Success(item);
+    }
+
+    public static IReadOnlyCollection<Notification> ValidateChange(int quantity, decimal unitPrice)
+    {
+        var errors = new List<Notification>();
+
         if (quantity > 20)
         {
             errors.Add(new Notification("quantity", "Não é possível vender mais de 20 unidades do mesmo produto."));
@@ -74,13 +90,6 @@ public sealed class SaleItem : Entity
             errors.Add(new Notification("unitPrice", "O preço unitário deve ser maior que zero."));
         }
 
-        if (errors.Count > 0)
-        {
-            return Result<SaleItem>.Failure(errors);
-        }
-
-        var item = new SaleItem(Guid.NewGuid(), product!, quantity, unitPrice);
-
-        return Result<SaleItem>.Success(item);
+        return errors;
     }
 }

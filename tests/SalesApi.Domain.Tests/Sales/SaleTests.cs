@@ -539,6 +539,23 @@ public class SaleTests
     }
 
     [Fact]
+    public void Update_ComPrecoUnitarioInvalidoEmItemExistente_DeveFalharComChaveItemsUnitPrice()
+    {
+        var product = Product();
+        var sale = CreateSale(new SaleItemInput(product, 2, 250.00m));
+        var itemId = sale.Items.Single().Id;
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[] { new SaleItemChangeInput(itemId, product, 2, 0m) });
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "items[0].unitPrice");
+    }
+
+    [Fact]
     public void Update_ComProdutoDuplicadoNoCorpo_DeveFalharComChaveItemsProductId()
     {
         var product = Product();
