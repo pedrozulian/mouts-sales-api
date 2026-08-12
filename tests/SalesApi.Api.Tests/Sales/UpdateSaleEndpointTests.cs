@@ -251,6 +251,49 @@ public class UpdateSaleEndpointTests : IClassFixture<SalesApiFactory>
     }
 
     [Fact]
+    public async Task PutSales_ReintroduzindoProdutoDeItemCancelado_DeveRetornar400ComChaveItemsProductId()
+    {
+        using var client = _factory.CreateClient();
+        var productAId = Guid.NewGuid();
+        var productBId = Guid.NewGuid();
+
+        var created = await CreateSaleAsync(client, new
+        {
+            customer = new { id = Guid.NewGuid(), name = "Maria Souza" },
+            branch = new { id = Guid.NewGuid(), name = "Filial Centro" },
+            items = new[]
+            {
+                new { product = new { id = productAId, name = "Produto A" }, quantity = 2, unitPrice = 10.00m },
+                new { product = new { id = productBId, name = "Produto B" }, quantity = 2, unitPrice = 10.00m },
+            },
+        });
+        var itemA = created.Items.Single(i => i.Product.Id == productAId);
+        var itemB = created.Items.Single(i => i.Product.Id == productBId);
+
+        var cancelResponse = await client.DeleteAsync($"/api/sales/{created.Id}/items/{itemA.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, cancelResponse.StatusCode);
+
+        var payload = new
+        {
+            saleDate = created.SaleDate,
+            customer = new { id = created.Customer.Id, name = created.Customer.Name },
+            branch = new { id = created.Branch.Id, name = created.Branch.Name },
+            items = new object[]
+            {
+                new { id = itemB.Id, product = new { id = productBId, name = "Produto B" }, quantity = 2, unitPrice = 10.00m },
+                new { product = new { id = productAId, name = "Produto A" }, quantity = 3, unitPrice = 10.00m },
+            },
+        };
+
+        var response = await client.PutAsJsonAsync($"/api/sales/{created.Id}", payload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.NotNull(body);
+        Assert.Contains(body!.Errors, e => e.Key == "items[1].product.id");
+    }
+
+    [Fact]
     public async Task PutSales_ComQuantidadeAcimaDoLimite_DeveRetornar400ComChaveItemsQuantity()
     {
         using var client = _factory.CreateClient();

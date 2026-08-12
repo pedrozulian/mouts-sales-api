@@ -224,7 +224,7 @@ public sealed class Sale : Entity
         }
     }
 
-    private static void ReconcileNewItem(
+    private void ReconcileNewItem(
         SaleItemChangeInput itemInput,
         int index,
         HashSet<Guid> seenProducts,
@@ -242,9 +242,19 @@ public sealed class Sale : Entity
             errors.AddRange(itemResult.Errors.Select(e => new Notification($"items[{index}].{e.Key}", e.Message)));
         }
 
-        if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty && !seenProducts.Add(itemInput.Product.Id))
+        // O produto de um item novo não pode coincidir com o de nenhum item já pertencente à
+        // venda — ativo ou cancelado (INV-03). Checar só contra os produtos vistos nesta
+        // requisição deixaria reintroduzir o produto de um item cancelado, que só seria barrado
+        // pelo índice único do banco — como exception de infraestrutura, não Notification.
+        if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty)
         {
-            errors.Add(new Notification($"items[{index}].product.id", "Produto duplicado entre os itens da venda."));
+            var produtoJaPertenceAVenda = _items.Any(i => i.Product.Id == itemInput.Product.Id)
+                || !seenProducts.Add(itemInput.Product.Id);
+
+            if (produtoJaPertenceAVenda)
+            {
+                errors.Add(new Notification($"items[{index}].product.id", "Produto já pertence a esta venda."));
+            }
         }
     }
 
