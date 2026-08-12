@@ -51,8 +51,6 @@ public sealed class CancelSaleCommandHandler : IRequestHandler<CancelSaleCommand
             return Result.Failure(new Notification("sale", "Venda já está cancelada."));
         }
 
-        _logger.LogInformation("Venda {SaleNumber} ({SaleId}) cancelada com sucesso.", sale.SaleNumber, sale.Id);
-
         return Result.Success();
     }
 }
