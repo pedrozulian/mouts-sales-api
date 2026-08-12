@@ -12,6 +12,21 @@ jobs:
   publish:
     name: publish
     runs-on: ubuntu-latest
+    services:
+      # Postgres efêmero, usado só pelo smoke test abaixo.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: salesapi
+          POSTGRES_USER: salesapi
+          POSTGRES_PASSWORD: salesapi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U salesapi -d salesapi"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,3 +67,15 @@ jobs:
             ${{ env.IMAGE_MIGRATOR }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke test — migrator via variável de ambiente
+        run: |
+          docker run --rm --network host \
+            -e ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=salesapi;Username=salesapi;Password=salesapi" \
+            ${{ env.IMAGE_MIGRATOR }}:${{ github.event.release.tag_name }}
+
+      - name: Smoke test — migrator via --connection
+        run: |
+          docker run --rm --network host \
+            ${{ env.IMAGE_MIGRATOR }}:${{ github.event.release.tag_name }} \
+            --connection "Host=localhost;Port=5432;Database=salesapi;Username=salesapi;Password=salesapi"
