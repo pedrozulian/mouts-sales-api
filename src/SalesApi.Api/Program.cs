@@ -3,6 +3,7 @@ using SalesApi.Api.HealthChecks;
 using SalesApi.Api.Sales;
 using SalesApi.Application;
 using SalesApi.Infrastructure;
+using SalesApi.Infrastructure.HealthChecks;
 using Serilog;
 using Serilog.Context;
 
@@ -21,9 +22,7 @@ builder.Services.AddSwaggerGen(options => options.SchemaFilter<CreateSaleRequest
 
 builder.Services
     .AddHealthChecks()
-    .AddNpgSql(
-        builder.Configuration.GetConnectionString("DefaultConnection")!,
-        name: "postgresql");
+    .AddCheck<PendingMigrationsHealthCheck>("postgresql");
 
 var app = builder.Build();
 
