@@ -30,7 +30,7 @@ public sealed class SaleItem : Entity
         DiscountPercentage = DiscountPolicy.GetPercentage(quantity);
 
         var grossAmount = unitPrice * quantity;
-        DiscountAmount = grossAmount * DiscountPercentage;
+        DiscountAmount = Math.Round(grossAmount * DiscountPercentage, 2, MidpointRounding.AwayFromZero);
         TotalAmount = grossAmount - DiscountAmount;
         IsCancelled = false;
     }
@@ -42,7 +42,7 @@ public sealed class SaleItem : Entity
         DiscountPercentage = DiscountPolicy.GetPercentage(quantity);
 
         var grossAmount = unitPrice * quantity;
-        DiscountAmount = grossAmount * DiscountPercentage;
+        DiscountAmount = Math.Round(grossAmount * DiscountPercentage, 2, MidpointRounding.AwayFromZero);
         TotalAmount = grossAmount - DiscountAmount;
     }
 

@@ -43,6 +43,23 @@ public class SaleTests
     }
 
     [Fact]
+    public void Create_ComItensCujosTotaisForamArredondados_TotalDaVendaDeveSerASomaExataDosItens()
+    {
+        var items = new[]
+        {
+            new SaleItemInput(Product("Item A"), 4, 12.34m),
+            new SaleItemInput(Product("Item B"), 4, 12.34m),
+        };
+
+        var result = Sale.Create(Customer(), Branch(), items, "V-000099");
+
+        Assert.True(result.IsSuccess);
+        var sale = result.Value!;
+        Assert.All(sale.Items, item => Assert.Equal(44.42m, item.TotalAmount));
+        Assert.Equal(88.84m, sale.TotalAmount);
+    }
+
+    [Fact]
     public void Create_SemSaleDateInformada_DeveAssumirOMomentoDoRegistro()
     {
         var before = DateTime.UtcNow;
@@ -222,6 +239,26 @@ public class SaleTests
         Assert.Equal(0.20m, item.DiscountPercentage);
         Assert.Equal(2400.00m, item.TotalAmount);
         Assert.Equal(2400.00m, sale.TotalAmount);
+    }
+
+    [Fact]
+    public void Update_ComQuantidadeQueMudaDeFaixaDeDescontoEProduzPontoMedioExato_DeveArredondarParaCimaEmValorAbsoluto()
+    {
+        var product = Product("Teclado Mecânico K68");
+        var sale = CreateSale(new SaleItemInput(product, 1, 10.00m));
+        var itemId = sale.Items.Single().Id;
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[] { new SaleItemChangeInput(itemId, product, 5, 12.35m) });
+
+        Assert.True(result.IsSuccess);
+        var item = sale.Items.Single();
+        Assert.Equal(6.18m, item.DiscountAmount);
+        Assert.Equal(55.57m, item.TotalAmount);
+        Assert.Equal(55.57m, sale.TotalAmount);
     }
 
     [Fact]
