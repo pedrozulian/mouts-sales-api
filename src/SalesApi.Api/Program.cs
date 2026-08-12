@@ -55,8 +55,6 @@ app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-
 app.MapGet("/health", async (HealthCheckService healthCheckService, HttpContext context) =>
 {
     var report = await healthCheckService.CheckHealthAsync();

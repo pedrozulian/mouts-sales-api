@@ -1,5 +1,6 @@
 using Mapster;
 using MediatR;
+using SalesApi.Api.Common;
 using SalesApi.Application.Common.Dtos;
 using SalesApi.Application.Sales.Cancel;
 using SalesApi.Application.Sales.CancelItem;
@@ -94,15 +95,9 @@ public static class SalesEndpoints
 
         var result = await sender.Send(command, cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            return Results.BadRequest(new
-            {
-                errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
-            });
-        }
-
-        return Results.Created($"/api/sales/{result.Value!.Id}", result.Value);
+        return result.IsSuccess
+            ? Results.Created($"/api/sales/{result.Value!.Id}", result.Value)
+            : result.ToErrorResult();
     }
 
     private static async Task<IResult> GetSale(
@@ -112,15 +107,7 @@ public static class SalesEndpoints
     {
         var result = await sender.Send(new GetSaleQuery(id), cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            return Results.NotFound(new
-            {
-                errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
-            });
-        }
-
-        return Results.Ok(result.Value);
+        return result.ToHttpResult("id");
     }
 
     private static async Task<IResult> ListSales(
@@ -136,15 +123,7 @@ public static class SalesEndpoints
 
         var result = await sender.Send(query, cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            return Results.BadRequest(new
-            {
-                errors = result.Errors.Select(error => new { key = error.Key, message = error.Message }),
-            });
-        }
-
-        return Results.Ok(result.Value);
+        return result.ToHttpResult();
     }
 
     private static async Task<IResult> UpdateSale(
@@ -157,16 +136,7 @@ public static class SalesEndpoints
 
         var result = await sender.Send(command, cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
-
-            return result.Errors.Any(error => error.Key == "id")
-                ? Results.NotFound(new { errors })
-                : Results.BadRequest(new { errors });
-        }
-
-        return Results.Ok(result.Value);
+        return result.ToHttpResult("id");
     }
 
     private static async Task<IResult> CancelSale(
@@ -176,16 +146,7 @@ public static class SalesEndpoints
     {
         var result = await sender.Send(new CancelSaleCommand(id), cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
-
-            return result.Errors.Any(error => error.Key == "id")
-                ? Results.NotFound(new { errors })
-                : Results.BadRequest(new { errors });
-        }
-
-        return Results.NoContent();
+        return result.ToNoContentResult("id");
     }
 
     private static async Task<IResult> CancelSaleItem(
@@ -196,15 +157,6 @@ public static class SalesEndpoints
     {
         var result = await sender.Send(new CancelSaleItemCommand(id, itemId), cancellationToken);
 
-        if (!result.IsSuccess)
-        {
-            var errors = result.Errors.Select(error => new { key = error.Key, message = error.Message });
-
-            return result.Errors.Any(error => error.Key == "id" || error.Key == "itemId")
-                ? Results.NotFound(new { errors })
-                : Results.BadRequest(new { errors });
-        }
-
-        return Results.NoContent();
+        return result.ToNoContentResult("id", "itemId");
     }
 }
