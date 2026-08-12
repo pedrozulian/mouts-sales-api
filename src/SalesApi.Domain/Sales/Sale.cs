@@ -146,7 +146,7 @@ public sealed class Sale : Entity
         TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+        AddDomainEvent(new ItemCancelled(Id, SaleNumber, item.Id, item.Product.Id, item.Quantity));
 
         return _items.All(i => i.IsCancelled) ? Cancel() : Result<Sale>.Success(this);
     }
@@ -276,7 +276,7 @@ public sealed class Sale : Entity
         foreach (var item in implicitlyCancelledItems)
         {
             item.Cancel();
-            AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+            AddDomainEvent(new ItemCancelled(Id, SaleNumber, item.Id, item.Product.Id, item.Quantity));
         }
 
         TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);
