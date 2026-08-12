@@ -242,10 +242,10 @@ public sealed class Sale : Entity
         // pelo índice único do banco — como exception de infraestrutura, não Notification.
         if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty)
         {
-            var produtoJaPertenceAVenda = _items.Any(i => i.Product.Id == itemInput.Product.Id)
+            var productAlreadyBelongsToSale = _items.Any(i => i.Product.Id == itemInput.Product.Id)
                 || !seenProducts.Add(itemInput.Product.Id);
 
-            if (produtoJaPertenceAVenda)
+            if (productAlreadyBelongsToSale)
             {
                 errors.Add(new Notification($"items[{index}].product.id", "Produto já pertence a esta venda."));
             }

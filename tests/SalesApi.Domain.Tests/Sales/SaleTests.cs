@@ -464,7 +464,7 @@ public class SaleTests
     {
         var product1 = Product("Item A");
         var product2 = Product("Item B");
-        var produtoNovo = Product("Item C");
+        var newProduct = Product("Item C");
         var sale = CreateSale(
             new SaleItemInput(product1, 2, 10.00m),
             new SaleItemInput(product2, 2, 10.00m));
@@ -479,12 +479,12 @@ public class SaleTests
             new[]
             {
                 new SaleItemChangeInput(item2Id, product2, 2, 10.00m),
-                new SaleItemChangeInput(null, produtoNovo, 3, 10.00m),
+                new SaleItemChangeInput(null, newProduct, 3, 10.00m),
             });
 
         Assert.True(result.IsSuccess);
         Assert.Equal(3, sale.Items.Count);
-        Assert.Contains(sale.Items, i => i.Product.Id == produtoNovo.Id && !i.IsCancelled);
+        Assert.Contains(sale.Items, i => i.Product.Id == newProduct.Id && !i.IsCancelled);
     }
 
     [Fact]
@@ -522,7 +522,7 @@ public class SaleTests
     [Theory]
     [InlineData(0)]
     [InlineData(21)]
-    public void Update_ComQuantidadeForaDoIntervalo_DeveFalharComChaveItemsQuantity(int quantidadeInvalida)
+    public void Update_ComQuantidadeForaDoIntervalo_DeveFalharComChaveItemsQuantity(int invalidQuantity)
     {
         var product = Product();
         var sale = CreateSale(new SaleItemInput(product, 2, 250.00m));
@@ -532,7 +532,7 @@ public class SaleTests
             sale.Customer,
             sale.Branch,
             sale.SaleDate,
-            new[] { new SaleItemChangeInput(itemId, product, quantidadeInvalida, 250.00m) });
+            new[] { new SaleItemChangeInput(itemId, product, invalidQuantity, 250.00m) });
 
         Assert.False(result.IsSuccess);
         Assert.Contains(result.Errors, e => e.Key == "items[0].quantity");
