@@ -1,20 +1,23 @@
 using Mapster;
-using SalesApi.Application.Common;
+using SalesApi.Application.Sales.Create;
+using SalesApi.Application.Sales.Dtos;
+using SalesApi.Domain.Sales;
 
 namespace SalesApi.Application.Tests.Common;
 
 public class MapsterConfigurationTests
 {
     [Fact]
-    public void SampleSource_DeveSerMapeadoParaSampleDestination()
+    public void ExternalReferenceRequest_DeveSerMapeadoParaExternalReference()
     {
         var config = new TypeAdapterConfig();
-        config.Scan(typeof(SampleMappingConfig).Assembly);
+        config.Scan(typeof(CreateSaleMappingConfig).Assembly);
 
-        var source = new SampleSource { Name = "Sales Api" };
+        var source = new ExternalReferenceRequest(Guid.NewGuid(), "Maria Souza");
 
-        var destination = source.Adapt<SampleDestination>(config);
+        var destination = source.Adapt<ExternalReference>(config);
 
+        Assert.Equal(source.Id, destination.Id);
         Assert.Equal(source.Name, destination.Name);
     }
 }

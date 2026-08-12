@@ -11,6 +11,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.ToTable("sale_items");
 
         builder.HasKey(i => i.Id);
+        builder.Property(i => i.Id).HasColumnName("id");
 
         // Id é sempre gerado pela aplicação (Guid.NewGuid() no construtor), nunca pelo EF Core ou
         // pelo banco. Sem isso, itens novos adicionados à coleção de uma Sale já rastreada (caso de
@@ -21,11 +22,16 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
 
         builder.Ignore(i => i.DomainEvents);
 
-        builder.Property(i => i.Quantity).IsRequired();
-        builder.Property(i => i.UnitPrice).HasColumnType("numeric(18,2)").IsRequired();
-        builder.Property(i => i.DiscountPercentage).HasColumnType("numeric(5,4)").IsRequired();
-        builder.Property(i => i.DiscountAmount).HasColumnType("numeric(18,2)").IsRequired();
-        builder.Property(i => i.TotalAmount).HasColumnType("numeric(18,2)").IsRequired();
+        // Shadow property da FK, declarada via Sale.HasMany(...).HasForeignKey("SaleId") — não
+        // existe uma propriedade C# em SaleItem para carregar o HasColumnName diretamente.
+        builder.Property<Guid>("SaleId").HasColumnName("sale_id");
+
+        builder.Property(i => i.Quantity).HasColumnName("quantity").IsRequired();
+        builder.Property(i => i.UnitPrice).HasColumnName("unit_price").HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(i => i.DiscountPercentage).HasColumnName("discount_percentage").HasColumnType("numeric(5,4)").IsRequired();
+        builder.Property(i => i.DiscountAmount).HasColumnName("discount_amount").HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(i => i.TotalAmount).HasColumnName("total_amount").HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(i => i.IsCancelled).HasColumnName("is_cancelled");
 
         builder.OwnsOne(i => i.Product, product =>
         {
@@ -33,7 +39,7 @@ public sealed class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
             product.Property(p => p.Name).HasColumnName("product_name").HasMaxLength(200);
         });
 
-        // Índice único composto (sale_id + product_id, INV-03) é criado diretamente na migration
-        // (CreateSales), pois HasIndex não suporta caminhos de navegação de owned types (EF Core 8).
+        // Índice único composto (sale_id + product_id, INV-03) é criado diretamente na migration,
+        // pois HasIndex não suporta caminhos de navegação de owned types (EF Core 8).
     }
 }

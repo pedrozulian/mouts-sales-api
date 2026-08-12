@@ -105,6 +105,47 @@ public class CreateSaleEndpointTests : IClassFixture<SalesApiFactory>
     }
 
     [Fact]
+    public async Task PostSales_ComDescontoComMaisDeDuasCasasDecimais_DeveDevolverValoresIdenticosNaConsultaSubsequente()
+    {
+        using var client = _factory.CreateClient();
+
+        var payload = new
+        {
+            customer = new { id = Guid.NewGuid(), name = "Maria Souza" },
+            branch = new { id = Guid.NewGuid(), name = "Filial Centro" },
+            items = new[]
+            {
+                new { product = new { id = Guid.NewGuid(), name = "Item A" }, quantity = 4, unitPrice = 12.34m },
+                new { product = new { id = Guid.NewGuid(), name = "Item B" }, quantity = 4, unitPrice = 12.34m },
+            },
+        };
+
+        var postResponse = await client.PostAsJsonAsync("/api/sales", payload);
+        Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
+        var postBody = await postResponse.Content.ReadFromJsonAsync<SaleResponse>();
+        Assert.NotNull(postBody);
+
+        Assert.Equal(88.84m, postBody!.TotalAmount);
+        Assert.All(postBody.Items, item =>
+        {
+            Assert.Equal(4.94m, item.DiscountAmount);
+            Assert.Equal(44.42m, item.TotalAmount);
+        });
+
+        var getResponse = await client.GetAsync($"/api/sales/{postBody.Id}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var getBody = await getResponse.Content.ReadFromJsonAsync<SaleResponse>();
+        Assert.NotNull(getBody);
+
+        Assert.Equal(postBody.TotalAmount, getBody!.TotalAmount);
+        for (var i = 0; i < postBody.Items.Count; i++)
+        {
+            Assert.Equal(postBody.Items.ElementAt(i).DiscountAmount, getBody.Items.ElementAt(i).DiscountAmount);
+            Assert.Equal(postBody.Items.ElementAt(i).TotalAmount, getBody.Items.ElementAt(i).TotalAmount);
+        }
+    }
+
+    [Fact]
     public async Task PostSales_ComQuantidadeAcimaDoLimite_DeveRetornar400ComChaveDaRegraViolada()
     {
         using var client = _factory.CreateClient();

@@ -33,6 +33,20 @@ services:
       timeout: 5s
       retries: 30
 
+  # Aplica as migrations pendentes e termina — etapa própria do provisionamento, fora do processo
+  # de runtime da Api. A `api` só inicia depois que este serviço conclui com sucesso.
+  migrator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-salesapi};Username=${POSTGRES_USER:-salesapi};Password=${POSTGRES_PASSWORD:-salesapi}"
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build:
       context: ..
@@ -45,6 +59,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 10s

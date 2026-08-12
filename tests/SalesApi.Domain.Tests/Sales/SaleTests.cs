@@ -43,6 +43,23 @@ public class SaleTests
     }
 
     [Fact]
+    public void Create_ComItensCujosTotaisForamArredondados_TotalDaVendaDeveSerASomaExataDosItens()
+    {
+        var items = new[]
+        {
+            new SaleItemInput(Product("Item A"), 4, 12.34m),
+            new SaleItemInput(Product("Item B"), 4, 12.34m),
+        };
+
+        var result = Sale.Create(Customer(), Branch(), items, "V-000099");
+
+        Assert.True(result.IsSuccess);
+        var sale = result.Value!;
+        Assert.All(sale.Items, item => Assert.Equal(44.42m, item.TotalAmount));
+        Assert.Equal(88.84m, sale.TotalAmount);
+    }
+
+    [Fact]
     public void Create_SemSaleDateInformada_DeveAssumirOMomentoDoRegistro()
     {
         var before = DateTime.UtcNow;
@@ -225,6 +242,26 @@ public class SaleTests
     }
 
     [Fact]
+    public void Update_ComQuantidadeQueMudaDeFaixaDeDescontoEProduzPontoMedioExato_DeveArredondarParaCimaEmValorAbsoluto()
+    {
+        var product = Product("Teclado Mecânico K68");
+        var sale = CreateSale(new SaleItemInput(product, 1, 10.00m));
+        var itemId = sale.Items.Single().Id;
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[] { new SaleItemChangeInput(itemId, product, 5, 12.35m) });
+
+        Assert.True(result.IsSuccess);
+        var item = sale.Items.Single();
+        Assert.Equal(6.18m, item.DiscountAmount);
+        Assert.Equal(55.57m, item.TotalAmount);
+        Assert.Equal(55.57m, sale.TotalAmount);
+    }
+
+    [Fact]
     public void Update_ComItemSemItemId_DeveAdicionarComoNovoItem()
     {
         var existingProduct = Product("Teclado Mecânico K68");
@@ -396,6 +433,92 @@ public class SaleTests
         Assert.Equal(product.Id, sale.Items.Single().Product.Id);
     }
 
+    [Fact]
+    public void Update_ReintroduzindoProdutoDeItemCancelado_DeveFalharComChaveItemsProductId()
+    {
+        var product1 = Product("Item A");
+        var product2 = Product("Item B");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 2, 10.00m),
+            new SaleItemInput(product2, 2, 10.00m));
+        var item1Id = sale.Items.Single(i => i.Product.Id == product1.Id).Id;
+        var item2Id = sale.Items.Single(i => i.Product.Id == product2.Id).Id;
+        sale.CancelItem(item1Id);
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[]
+            {
+                new SaleItemChangeInput(item2Id, product2, 2, 10.00m),
+                new SaleItemChangeInput(null, product1, 3, 10.00m),
+            });
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "items[1].product.id");
+    }
+
+    [Fact]
+    public void Update_ComProdutoNovoQueNaoPertenceANenhumItemExistente_DeveAdicionarNormalmente()
+    {
+        var product1 = Product("Item A");
+        var product2 = Product("Item B");
+        var produtoNovo = Product("Item C");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 2, 10.00m),
+            new SaleItemInput(product2, 2, 10.00m));
+        var item1Id = sale.Items.Single(i => i.Product.Id == product1.Id).Id;
+        var item2Id = sale.Items.Single(i => i.Product.Id == product2.Id).Id;
+        sale.CancelItem(item1Id);
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[]
+            {
+                new SaleItemChangeInput(item2Id, product2, 2, 10.00m),
+                new SaleItemChangeInput(null, produtoNovo, 3, 10.00m),
+            });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, sale.Items.Count);
+        Assert.Contains(sale.Items, i => i.Product.Id == produtoNovo.Id && !i.IsCancelled);
+    }
+
+    [Fact]
+    public void Update_ReintroduzindoProdutoDeItemCancelado_NaoDeveMutarNenhumEstadoDaVenda()
+    {
+        var product1 = Product("Item A");
+        var product2 = Product("Item B");
+        var sale = CreateSale(
+            new SaleItemInput(product1, 2, 10.00m),
+            new SaleItemInput(product2, 2, 10.00m));
+        var item1Id = sale.Items.Single(i => i.Product.Id == product1.Id).Id;
+        var item2Id = sale.Items.Single(i => i.Product.Id == product2.Id).Id;
+        sale.CancelItem(item1Id);
+        var totalAntes = sale.TotalAmount;
+        var updatedAtAntes = sale.UpdatedAt;
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[]
+            {
+                new SaleItemChangeInput(item2Id, product2, 2, 10.00m),
+                new SaleItemChangeInput(null, product1, 3, 10.00m),
+            });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(2, sale.Items.Count);
+        Assert.True(sale.Items.Single(i => i.Id == item1Id).IsCancelled);
+        Assert.Equal(2, sale.Items.Single(i => i.Id == item2Id).Quantity);
+        Assert.Equal(totalAntes, sale.TotalAmount);
+        Assert.Equal(updatedAtAntes, sale.UpdatedAt);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(21)]
@@ -413,6 +536,23 @@ public class SaleTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains(result.Errors, e => e.Key == "items[0].quantity");
+    }
+
+    [Fact]
+    public void Update_ComPrecoUnitarioInvalidoEmItemExistente_DeveFalharComChaveItemsUnitPrice()
+    {
+        var product = Product();
+        var sale = CreateSale(new SaleItemInput(product, 2, 250.00m));
+        var itemId = sale.Items.Single().Id;
+
+        var result = sale.Update(
+            sale.Customer,
+            sale.Branch,
+            sale.SaleDate,
+            new[] { new SaleItemChangeInput(itemId, product, 2, 0m) });
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, e => e.Key == "items[0].unitPrice");
     }
 
     [Fact]

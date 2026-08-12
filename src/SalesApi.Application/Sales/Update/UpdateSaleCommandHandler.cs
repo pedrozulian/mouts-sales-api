@@ -58,8 +58,6 @@ public sealed class UpdateSaleCommandHandler : IRequestHandler<UpdateSaleCommand
             return Result<SaleResponse>.Failure(new Notification("sale", "Venda cancelada não pode ser alterada."));
         }
 
-        _logger.LogInformation("Venda {SaleNumber} ({SaleId}) alterada com sucesso.", sale.SaleNumber, sale.Id);
-
         return Result<SaleResponse>.Success(sale.Adapt<SaleResponse>());
     }
 }

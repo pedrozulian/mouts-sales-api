@@ -33,17 +33,18 @@ public class ItemCancelledEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DeveLogarSaleIdSaleItemIdEProductId()
+    public async Task Handle_DeveLogarSaleIdSaleNumberSaleItemIdEProductId()
     {
         var logger = new FakeLogger<ItemCancelledEventHandler>();
         var handler = new ItemCancelledEventHandler(logger);
-        var notification = new ItemCancelled(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 2);
+        var notification = new ItemCancelled(Guid.NewGuid(), "V-000123", Guid.NewGuid(), Guid.NewGuid(), 2);
 
         await handler.Handle(notification, CancellationToken.None);
 
         Assert.Contains(
             logger.Messages,
             m => m.Contains(notification.SaleId.ToString())
+                && m.Contains(notification.SaleNumber)
                 && m.Contains(notification.SaleItemId.ToString())
                 && m.Contains(notification.ProductId.ToString()));
     }

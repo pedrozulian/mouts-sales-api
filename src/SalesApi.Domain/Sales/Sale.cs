@@ -146,7 +146,7 @@ public sealed class Sale : Entity
         TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);
         UpdatedAt = DateTime.UtcNow;
 
-        AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+        AddDomainEvent(new ItemCancelled(Id, SaleNumber, item.Id, item.Product.Id, item.Quantity));
 
         return _items.All(i => i.IsCancelled) ? Cancel() : Result<Sale>.Success(this);
     }
@@ -201,17 +201,11 @@ public sealed class Sale : Entity
             return;
         }
 
-        if (itemInput.Quantity > 20)
+        var changeErrors = SaleItem.ValidateChange(itemInput.Quantity, itemInput.UnitPrice);
+
+        if (changeErrors.Count > 0)
         {
-            errors.Add(new Notification($"items[{index}].quantity", "Não é possível vender mais de 20 unidades do mesmo produto."));
-        }
-        else if (itemInput.Quantity < 1)
-        {
-            errors.Add(new Notification($"items[{index}].quantity", "A quantidade deve ser de ao menos 1 unidade."));
-        }
-        else if (itemInput.UnitPrice <= 0)
-        {
-            errors.Add(new Notification($"items[{index}].unitPrice", "O preço unitário deve ser maior que zero."));
+            errors.AddRange(changeErrors.Select(e => new Notification($"items[{index}].{e.Key}", e.Message)));
         }
         else
         {
@@ -224,7 +218,7 @@ public sealed class Sale : Entity
         }
     }
 
-    private static void ReconcileNewItem(
+    private void ReconcileNewItem(
         SaleItemChangeInput itemInput,
         int index,
         HashSet<Guid> seenProducts,
@@ -242,9 +236,19 @@ public sealed class Sale : Entity
             errors.AddRange(itemResult.Errors.Select(e => new Notification($"items[{index}].{e.Key}", e.Message)));
         }
 
-        if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty && !seenProducts.Add(itemInput.Product.Id))
+        // O produto de um item novo não pode coincidir com o de nenhum item já pertencente à
+        // venda — ativo ou cancelado (INV-03). Checar só contra os produtos vistos nesta
+        // requisição deixaria reintroduzir o produto de um item cancelado, que só seria barrado
+        // pelo índice único do banco — como exception de infraestrutura, não Notification.
+        if (itemInput.Product is not null && itemInput.Product.Id != Guid.Empty)
         {
-            errors.Add(new Notification($"items[{index}].product.id", "Produto duplicado entre os itens da venda."));
+            var produtoJaPertenceAVenda = _items.Any(i => i.Product.Id == itemInput.Product.Id)
+                || !seenProducts.Add(itemInput.Product.Id);
+
+            if (produtoJaPertenceAVenda)
+            {
+                errors.Add(new Notification($"items[{index}].product.id", "Produto já pertence a esta venda."));
+            }
         }
     }
 
@@ -272,7 +276,7 @@ public sealed class Sale : Entity
         foreach (var item in implicitlyCancelledItems)
         {
             item.Cancel();
-            AddDomainEvent(new ItemCancelled(Id, item.Id, item.Product.Id, item.Quantity));
+            AddDomainEvent(new ItemCancelled(Id, SaleNumber, item.Id, item.Product.Id, item.Quantity));
         }
 
         TotalAmount = _items.Where(i => !i.IsCancelled).Sum(i => i.TotalAmount);

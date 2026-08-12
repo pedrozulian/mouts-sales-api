@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using SalesApi.Api.ErrorHandling;
 using SalesApi.Api.HealthChecks;
 using SalesApi.Api.Sales;
 using SalesApi.Application;
 using SalesApi.Infrastructure;
+using SalesApi.Infrastructure.HealthChecks;
 using Serilog;
 using Serilog.Context;
 
@@ -11,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console());
+    .WriteTo.Console(),
+    writeToProviders: true);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -21,9 +24,10 @@ builder.Services.AddSwaggerGen(options => options.SchemaFilter<CreateSaleRequest
 
 builder.Services
     .AddHealthChecks()
-    .AddNpgSql(
-        builder.Configuration.GetConnectionString("DefaultConnection")!,
-        name: "postgresql");
+    .AddCheck<PendingMigrationsHealthCheck>("postgresql");
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -44,12 +48,12 @@ app.Use(async (context, next) =>
     }
 });
 
+app.UseExceptionHandler();
+
 app.UseSerilogRequestLogging();
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
 
 app.MapGet("/health", async (HealthCheckService healthCheckService, HttpContext context) =>
 {

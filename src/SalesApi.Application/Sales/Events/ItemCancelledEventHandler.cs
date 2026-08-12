@@ -16,9 +16,10 @@ public sealed class ItemCancelledEventHandler : INotificationHandler<ItemCancell
     public Task Handle(ItemCancelled notification, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Item {SaleItemId} do produto {ProductId} cancelado na venda {SaleId}, quantidade {Quantity}.",
+            "Item {SaleItemId} do produto {ProductId} cancelado na venda {SaleNumber} ({SaleId}), quantidade {Quantity}.",
             notification.SaleItemId,
             notification.ProductId,
+            notification.SaleNumber,
             notification.SaleId,
             notification.Quantity);
 
