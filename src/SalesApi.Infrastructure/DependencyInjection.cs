@@ -12,6 +12,19 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
+        // O fail-fast abaixo não se aplica ao migrator — ver Guia Técnico, seção 14.
+        var isMigratorArtifact = string.Equals(
+            configuration["SalesApi:Artifact"],
+            "migrator",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!isMigratorArtifact && string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Connection string 'DefaultConnection' não configurada. Defina a variável de " +
+                "ambiente ConnectionStrings__DefaultConnection apontando para o PostgreSQL.");
+        }
+
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<ISaleNumberGenerator, SaleNumberGenerator>();
