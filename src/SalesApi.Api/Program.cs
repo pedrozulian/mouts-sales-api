@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using SalesApi.Api.ErrorHandling;
 using SalesApi.Api.HealthChecks;
 using SalesApi.Api.Sales;
 using SalesApi.Application;
@@ -12,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console());
+    .WriteTo.Console(),
+    writeToProviders: true);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -23,6 +25,9 @@ builder.Services.AddSwaggerGen(options => options.SchemaFilter<CreateSaleRequest
 builder.Services
     .AddHealthChecks()
     .AddCheck<PendingMigrationsHealthCheck>("postgresql");
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -42,6 +47,8 @@ app.Use(async (context, next) =>
         await next();
     }
 });
+
+app.UseExceptionHandler();
 
 app.UseSerilogRequestLogging();
 
