@@ -44,6 +44,47 @@ dotnet ef database update --project src/SalesApi.Infrastructure --startup-projec
 dotnet run --project src/SalesApi.Api
 ```
 
+## Execução a partir de imagens publicadas
+
+Alternativa à seção anterior para quem quer rodar a API sem clonar o repositório nem compilar
+nada localmente — usando as imagens publicadas no Docker Hub
+([`pedrozulian/mouts-sales-api`](https://hub.docker.com/r/pedrozulian/mouts-sales-api) e
+[`pedrozulian/mouts-sales-api-migrator`](https://hub.docker.com/r/pedrozulian/mouts-sales-api-migrator)),
+contra um PostgreSQL à sua escolha — na mesma máquina, em outro container ou em outro servidor.
+
+Com Docker Compose, contra o PostgreSQL provisionado pelo próprio compose:
+
+```bash
+cp docker/.env.example docker/.env
+TAG=latest docker compose -f docker/docker-compose.release.yml up -d
+```
+
+Mesma ordem de provisionamento da seção anterior (`postgres` → `migrator` → `api`), mas nenhum
+dos dois serviços da aplicação é construído localmente — ambos usam `image:` apontando para o
+Docker Hub. Use `TAG=<versão>` para fixar uma versão específica em vez de `latest` (ver
+[Releases do GitHub](https://github.com/pedrozulian/mouts-sales-api/releases) e
+[`CHANGELOG.md`](CHANGELOG.md) para as versões disponíveis).
+
+Sem Compose, apontando para um banco de dados em outro servidor:
+
+```bash
+# 1. Preparar a estrutura de dados (uma vez, ou a cada nova versão)
+docker run --rm \
+  -e ConnectionStrings__DefaultConnection="Host=<host>;Port=5432;Database=<db>;Username=<user>;Password=<senha>" \
+  pedrozulian/mouts-sales-api-migrator:latest
+
+# 2. Subir a aplicação apontando para o mesmo banco
+docker run -d -p 8080:8080 \
+  -e ConnectionStrings__DefaultConnection="Host=<host>;Port=5432;Database=<db>;Username=<user>;Password=<senha>" \
+  pedrozulian/mouts-sales-api:latest
+```
+
+`ConnectionStrings__DefaultConnection` é a única variável obrigatória — sem ela, o container
+encerra imediatamente na inicialização com uma mensagem indicando o que falta, em vez de subir e
+falhar de forma obscura na primeira requisição. Por default a imagem assume
+`ASPNETCORE_ENVIRONMENT=Production`; para rodar em modo desenvolvimento, defina essa variável
+explicitamente — não é necessária uma imagem diferente para isso.
+
 ## Uso
 
 - **Documentação interativa**: `http://localhost:8080/swagger`

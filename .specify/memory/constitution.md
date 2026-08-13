@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 → 1.0.1 (patch — esclarecimento não semântico)
+Version change: 1.0.1 → 1.1.0 (minor — ampliação de diretriz existente e da stack obrigatória)
 Modified principles:
-  - IX. Qualidade de Código — esclarecido que o gate de CI usa SonarCloud e a análise local
-    usa SonarQube Community Edition via Docker (mesma regra de negócio, apenas explicitação
-    da ferramenta em cada ambiente)
-Added sections: nenhuma
+  - IV. Documentação e Comunicação em Português — esclarecido que nomes de método de teste MAY
+    permanecer em português, por funcionarem como documentação executável de comportamento e não
+    como identificador de API do sistema (exceção já praticada, agora formalizada)
+Added sections: nenhuma (Stack Tecnológica Obrigatória ganhou duas entradas, sem virar seção nova)
 Removed sections: nenhuma
 Templates requiring updates:
   - .specify/templates/plan-template.md ⚠ pending manual review (Constitution Check gate deve referenciar estes 10 princípios)
@@ -52,10 +52,13 @@ Rationale: mantém o código extensível e testável à medida que o domínio de
 README, comentários de código, descrições de commits, Pull Requests, issues e demais artefatos
 de documentação MUST ser escritos em português. Identificadores de código (nomes de classes,
 métodos, variáveis, namespaces) MUST permanecer em inglês, seguindo a convenção usual do
-ecossistema .NET.
+ecossistema .NET. Exceção: nomes de método de teste MAY ser escritos em português, por
+funcionarem como documentação executável do comportamento esperado, e não como API do sistema.
 
 Rationale: alinha a comunicação do time ao idioma do projeto sem abrir mão da compatibilidade
-com bibliotecas, frameworks e convenções da stack .NET, que são majoritariamente em inglês.
+com bibliotecas, frameworks e convenções da stack .NET, que são majoritariamente em inglês. Nomes
+de teste em português tornam a intenção do cenário legível como frase, sem o custo de tradução
+que um identificador de produção exige.
 
 ### V. Arquitetura em Camadas (Clean Architecture)
 
@@ -134,6 +137,10 @@ e CI.
   docker-compose do ambiente de desenvolvimento, para análise antes do push/PR.
 - **CI/CD**: GitHub Actions, com no mínimo os steps de build, test e sonar (gate de cobertura
   via SonarCloud).
+- **Publicação de imagens**: Docker Hub, como registro público dos artefatos executáveis da
+  aplicação e do provisionamento de schema, versionados por tag semântica.
+- **Versionamento e changelog**: release-please, a partir de Conventional Commits, para
+  determinar o incremento semântico de versão e gerar `CHANGELOG.md` automaticamente.
 
 Mudanças de stack (troca de biblioteca, banco de dados ou provedor de CI/CD) MUST passar por
 amendment desta constitution antes de serem adotadas.
@@ -166,4 +173,4 @@ Toda revisão de código e todo plano técnico (`/speckit-plan`) MUST verificar 
 esta constitution. Complexidade adicional (ex.: nova camada, novo padrão) MUST ser justificada
 explicitamente na spec ou no plano correspondente.
 
-**Version**: 1.0.1 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-08
+**Version**: 1.1.0 | **Ratified**: 2026-08-08 | **Last Amended**: 2026-08-12

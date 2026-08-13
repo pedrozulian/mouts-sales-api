@@ -37,6 +37,10 @@ RUN RID=$(if [ "$TARGETARCH" = "arm64" ]; then echo linux-arm64; else echo linux
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0 AS migrator
 WORKDIR /app
 COPY --from=bundle /app/efbundle/migrate ./migrate
+
+# Sinaliza DependencyInjection.AddInfrastructure que este não é o artefato da Api.
+ENV SalesApi__Artifact=migrator
+
 ENTRYPOINT ["./migrate"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
@@ -53,6 +57,7 @@ RUN chown -R salesapi:salesapi /app
 
 USER salesapi
 
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
