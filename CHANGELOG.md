@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/pedrozulian/mouts-sales-api/compare/v1.1.0...v1.2.0) (2026-08-13)
+
+
+### Features
+
+* habilita auto-merge do pr de release condicionado aos checks obrigatórios ([f961ae8](https://github.com/pedrozulian/mouts-sales-api/commit/f961ae8caf6cc40cf3924f6e2d8bdd6faf9cb361))
+
 ## [1.1.0](https://github.com/pedrozulian/mouts-sales-api/compare/v1.0.0...v1.1.0) (2026-08-13)
 
 
