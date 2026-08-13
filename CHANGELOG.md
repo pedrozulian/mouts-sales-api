@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1](https://github.com/pedrozulian/mouts-sales-api/compare/v1.2.0...v1.2.1) (2026-08-13)
+
+
+### Bug Fixes
+
+* consolida ci, release-please e cd em um único workflow sequencial ([a97034a](https://github.com/pedrozulian/mouts-sales-api/commit/a97034a37543f3c4ecf47518d31b270add660097))
+* declara permissões de leitura no nível de job em vez de workflow ([fa2eefe](https://github.com/pedrozulian/mouts-sales-api/commit/fa2eefeb268c648bb64677c13edf294e33a54251))
+* elimina a corrida entre CI e CD no pipeline de release ([3e2ceea](https://github.com/pedrozulian/mouts-sales-api/commit/3e2ceeae2c8b6812e5fcee3093949e22e0bb1d0b))
+
 ## [1.2.0](https://github.com/pedrozulian/mouts-sales-api/compare/v1.1.0...v1.2.0) (2026-08-13)
 
 
