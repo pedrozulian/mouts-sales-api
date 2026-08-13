@@ -226,6 +226,72 @@ uma diretriz existente") — a adição de duas ferramentas à lista obrigatóri
 literalmente aí. O esclarecimento sobre testes, isoladamente, seria PATCH; como as duas mudanças
 saem juntas no mesmo commit de emenda, a versão resultante segue a maior das duas (MINOR).
 
+## 8. Auto-merge do PR de release, condicionado ao CI
+
+**Decision**: passo adicional em `release-please.yml`, após a criação/atualização do PR de
+release, habilitando `gh pr merge --auto --merge` sobre esse PR — condicionado a
+`steps.release.outputs.prs_created == 'true'`. O merge só se efetiva quando os status checks
+obrigatórios (`build`, `test`, `sonar`) passarem, via **branch protection em `main`** exigindo
+exatamente esses três checks e "Require branches to be up to date before merging" — pré-requisito
+funcional desta decisão, não apenas defesa em profundidade.
+
+**Rationale**: FR-021 exige que a preparação de uma nova versão seja revisável antes de ser
+efetivada — mas "revisável" não exige clique manual obrigatório em toda release, apenas que
+exista uma janela em que a versão determinada e o changelog gerado possam ser inspecionados e,
+se necessário, interrompidos antes de virarem tag/Release. Auto-merge condicionado aos checks
+obrigatórios preserva exatamente essa janela (do momento em que o PR é aberto/atualizado até os
+checks concluírem), sem exigir intervenção humana no caminho feliz — remove a única etapa manual
+restante do fluxo de release sem abrir mão do ponto de revisão.
+
+**Alternatives considered**:
+- **Espera explícita via polling em `gh run list`, com merge manual só depois** (tentativa
+  intermediária, revertida): implementada e testada antes desta decisão final — cerca de 25
+  linhas de bash reimplementando, dentro do workflow, exatamente o que a fila de merge nativa do
+  GitHub já resolve. Motivada pela preocupação de que `--auto` mesclasse sem esperar nada caso a
+  branch protection não estivesse configurada — mas essa é uma lacuna de configuração, não algo
+  que se resolve com mais código. Revertida assim que a branch protection foi configurada
+  corretamente (ver Governança abaixo), restaurando a versão simples.
+- **Manter o merge manual obrigatório**: mantém a revisão humana em 100% das releases, mas
+  reintroduz a necessidade de alguém lembrar de mesclar o PR — rejeitada porque o objetivo
+  explícito desta mudança é eliminar exatamente essa dependência de ação manual, mantendo o PR
+  como registro auditável.
+- **Trocar release-please por uma ferramenta sem PR intermediário** (ex.: semantic-release, que
+  publica a release direto no push): eliminaria a etapa de PR por completo, mas descartaria o
+  ponto de revisão que FR-021 exige e obrigaria trocar de ferramenta — desproporcional ao
+  problema, que é só "automatizar o clique", não "eliminar a revisão".
+- **Squash em vez de merge commit**: tecnicamente equivalente para este repositório (pacote
+  único na raiz, sem monorepo), mas merge commit é o padrão recomendado pelos mantenedores do
+  release-please para o PR de release especificamente — mantido por ser o caminho testado pela
+  própria ferramenta, e por já ser o método usado nos merges anteriores deste repositório.
+
+**Governança**: `main` exige os status checks `build`, `test` e `sonar` antes de qualquer merge
+(incluindo "Require branches to be up to date before merging") — configurado em Settings →
+Branches, ação manual do usuário, fora do controle de versão. Sem essa configuração, `--auto`
+mescla sem esperar nada; com ela, é o próprio GitHub que garante a espera, sem código adicional.
+
+## 9. CD não precisa de um gate próprio esperando o CI
+
+**Decision**: `cd.yml` permanece disparando só em `release: published`, sem nenhum step
+adicional aguardando o `ci.yml`.
+
+**Rationale**: uma release só passa a existir depois que o PR de release é mesclado — e esse
+merge, pela decisão da seção 8, só ocorre depois que `build`, `test` e `sonar` passarem para
+aquele exato conteúdo (branch protection bloqueia qualquer merge, automático ou manual, até os
+checks passarem). Como o merge usa a estratégia "criar commit de merge", a árvore do commit
+resultante em `main` é idêntica à do PR que acabou de ser validado — não há conteúdo novo,
+não-testado, entrando nesse momento. Um segundo gate em `cd.yml` estaria revalidando a mesma
+garantia que a branch protection já oferece na única porta de entrada para `main`, sem reduzir
+risco adicional.
+
+**Alternatives considered**:
+- **Polling do `ci.yml` dentro de `cd.yml`** (tentativa intermediária, revertida): implementada e
+  testada localmente, mas redundante com a garantia da seção 8 uma vez que a branch protection
+  está configurada — a mesma reversão de complexidade desnecessária se aplica aqui.
+- **Trigger `workflow_run` do `ci.yml` em vez de `release: published`**: dispararia `cd.yml` a
+  cada conclusão do `ci.yml`, exigindo lógica adicional para filtrar apenas os commits que
+  correspondem a uma release publicada (o evento `workflow_run` não carrega esse contexto) —
+  mais convoluto do que manter `release: published` como gatilho semântico único.
+
 ## Resumo das decisões
 
 | # | Área | Decisão |
@@ -238,5 +304,7 @@ saem juntas no mesmo commit de emenda, a versão resultante segue a maior das du
 | 5 | Compose de release | `docker/docker-compose.release.yml` novo, com `image:` |
 | 6 | Smoke test | Service container Postgres + `docker run` do migrator publicado |
 | 7 | Constitution | Emenda MINOR (1.0.1 → 1.1.0): stack + exceção de nomes de teste |
+| 8 | Auto-merge do PR de release | `gh pr merge --auto --merge`, condicionado à branch protection de `main` |
+| 9 | CD sem gate próprio | Desnecessário — branch protection já garante que só entra em `main` o que passou no CI |
 
 Nenhum `NEEDS CLARIFICATION` remanescente.
