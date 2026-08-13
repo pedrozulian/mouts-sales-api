@@ -212,9 +212,10 @@ abre/atualiza o PR de release com bump de versão e changelog corretos; merge cr
 - [X] T014 [US3] `README.md`: complementar a seção criada em T005 (US1) com um apontamento para
   `CHANGELOG.md` e para as Releases do GitHub como fonte de versões disponíveis — em
   `README.md`, sequência de T005 (FR-020, FR-030; depende de T005, T012, T013)
-- [ ] T015 [US3] Validar manualmente `quickstart.md`, Cenário 4, passos 1–5, contra um merge real
+- [X] T015 [US3] Validar manualmente `quickstart.md`, Cenário 4, passos 1–5, contra um merge real
   em `main` após esta feature ser integrada — checkpoint manual, não reproduzível localmente
-  (depende de T012, T013)
+  (depende de T012, T013). Validado: PR `chore(main): release 1.1.0` aberto automaticamente após
+  o merge da feature, revisado e mesclado manualmente, criando a tag `v1.1.0` e a GitHub Release
 
 **Checkpoint**: US1 a US3 completos — versões passam a ter histórico automático e rastreável; o
 gatilho de publicação de US1 passa a ter origem real.
@@ -250,9 +251,11 @@ marcado como bem-sucedido, sem depender de banco preexistente.
   código de saída do container (falha de qualquer um = falha do job) — em
   `.github/workflows/cd.yml`, sequência de T003 (FR-013, FR-022 a FR-024; depende de T003; ver
   research.md, seção 6)
-- [ ] T017 [US4] Validar manualmente `quickstart.md`, Cenário 4 (passos 6–8) e Cenário 5 contra
+- [X] T017 [US4] Validar manualmente `quickstart.md`, Cenário 4 (passos 6–8) e Cenário 5 contra
   a primeira execução real do workflow após esta feature ser integrada — checkpoint manual
-  (depende de T015, T016)
+  (depende de T015, T016). Validado: `cd.yml` disparado pelo evento `release: published`
+  (run 31655902751), build + push das duas imagens e ambos os smoke tests concluídos com
+  `conclusion: success`
 
 **Checkpoint**: US1 a US4 completos — o ciclo de release está fechado: versão determinada
 automaticamente, imagens publicadas, artefato verificado (incluindo as duas formas de fornecer
@@ -308,10 +311,42 @@ verificado, e a base de código está em conformidade com a convenção de idiom
   subindo e operando exatamente como antes desta feature — `docker compose -f
   docker/docker-compose.yml down -v && up -d`, seguido de `POST /api/sales` bem-sucedido
   (FR-027, SC-010)
-- [ ] T025 Critério de aceite geral da spec: após o merge desta feature em `main` e a primeira
+- [X] T025 Critério de aceite geral da spec: após o merge desta feature em `main` e a primeira
   execução real do ciclo completo (commit → PR de release → merge → tag/Release → CD → smoke
   test → imagens publicadas), confirmar as 10 Success Criteria da spec — validação final
-  combinada de todas as user stories (depende de todas as fases anteriores e de T015, T017)
+  combinada de todas as user stories (depende de todas as fases anteriores e de T015, T017).
+  Confirmado: release `v1.1.0` publicada, imagens `mouts-sales-api` e `mouts-sales-api-migrator`
+  publicadas sob a mesma tag, smoke test aprovado antes da conclusão do job (run 31655902751,
+  `conclusion: success`)
+
+---
+
+## Phase 9: Ajuste — auto-merge do PR de release
+
+**Goal**: eliminar a última etapa manual do ciclo de release (o clique de merge no PR aberto pelo
+release-please), sem abrir mão do ponto de revisão que FR-021 exige. Decisão registrada em
+`research.md`, seções 8 e 9, e em `spec.md` (Assumptions).
+
+- [X] T028 Configurar branch protection em `main` (Settings → Branches): required status checks
+  `build`, `test`, `sonar`; "Require branches to be up to date before merging" — ação manual do
+  usuário, e **pré-requisito funcional** de T026 (sem isso, `--auto` mescla sem esperar nada)
+- [X] T026 `release-please.yml`: dar `id: release` ao step do `release-please-action`; novo step
+  `Habilita auto-merge no PR de release`, condicionado a
+  `steps.release.outputs.prs_created == 'true'`, rodando
+  `gh pr merge --auto --merge --repo "${{ github.repository }}" "${{ fromJSON(steps.release.outputs.pr).number }}"`,
+  autenticado via `GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}` — em
+  `.github/workflows/release-please.yml` (ver research.md, seção 8)
+
+**Nota de revisão**: a primeira implementação (T026/T027 originais) reimplementava a espera pelo
+CI via polling manual (`gh run list`) em ambos os workflows — motivada pela branch protection
+ainda não estar configurada. Depois de T028 configurada, essa espera passou a ser redundante com
+o que o próprio GitHub já garante nativamente: revertida em favor da versão simples acima. T027
+(gate equivalente em `cd.yml`) foi removida por completo — desnecessária uma vez que a única porta
+de entrada para `main` já exige os três checks (ver research.md, seção 9).
+
+**Checkpoint**: próximo PR de release aberto pelo release-please deve mesclar sozinho assim que
+`build`, `test` e `sonar` passarem, sem clique manual e sem nenhum step adicional em `cd.yml` —
+observável só no próximo ciclo de release real.
 
 ---
 
