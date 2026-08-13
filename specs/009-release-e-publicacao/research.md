@@ -343,6 +343,58 @@ atualizado para refletir essa reversão.
   um pipeline que já é linear (sem branches condicionais reaproveitadas por outros triggers).
   Rejeitada por não simplificar nada sobre a opção escolhida.
 
+## 10. Actions fixadas em runtime Node 20, já depreciado pelo GitHub Actions
+
+**O que aconteceu**: após a consolidação da seção 9, as execuções de `ci-cd.yml` passaram a
+exibir 6 anotações de warning — uma por job (`build`, `test`, `sonar`, `release-please`,
+`publish`) — informando que `actions/checkout@v4`, `actions/setup-dotnet@v4`,
+`actions/upload-artifact@v4`, `actions/download-artifact@v4`, `actions/setup-java@v4`, e as
+actions pinadas por SHA (`googleapis/release-please-action` v4.4.1, `docker/build-push-action`
+v6.19.2, `docker/login-action` v3.7.0, `docker/setup-buildx-action` v3.12.0) declaram `using:
+node20` no próprio `action.yml`, e que o GitHub já força a execução delas em Node 24 por baixo —
+runtime que essas versões nunca foram testadas contra. Node 20 entra em depreciação nos runners
+hospedados (anúncio referenciado nas próprias anotações:
+https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/).
+
+**Decision**: atualizar cada action para a primeira versão própria que declara `using: node24` no
+`action.yml`, verificado individualmente por leitura direta do arquivo em cada tag candidata — não
+por suposição de que "major mais novo resolve":
+
+| Action | Antes | Depois | Confirmado node24 em |
+|---|---|---|---|
+| `actions/checkout` | v4 | v5 | `action.yml` de v5.1.0 |
+| `actions/setup-dotnet` | v4 | v5 | `action.yml` de v5.4.0 |
+| `actions/upload-artifact` | v4 | v6 | `action.yml` de v6.0.0 (v5.0.0 confirmado ainda `node20`) |
+| `actions/download-artifact` | v4 | v7 | `action.yml` de v7.0.0 (v5.0.0 e v6.0.0 confirmados ainda `node20`) |
+| `actions/setup-java` | v4 | v5 | `action.yml` de v5.7.0 |
+| `googleapis/release-please-action` | `5c625bf…` (v4.4.1) | `45996ed1f6d02564a971a2fa1b5860e934307cf7` (v5.0.0) | `action.yml` de v5.0.0 |
+| `docker/setup-buildx-action` | `8d2750c…` (v3.12.0) | `bb05f3f5519dd87d3ba754cc423b652a5edd6d2c` (v4.2.0) | `action.yml` de v4.2.0 |
+| `docker/login-action` | `c94ce9f…` (v3.7.0) | `dbcb813823bdd20940b903addbd779551569679f` (v4.6.0) | `action.yml` de v4.6.0 |
+| `docker/build-push-action` | `10e90e3…` (v6.19.2) | `53b7df96c91f9c12dcc8a07bcb9ccacbed38856a` (v7.3.0) | `action.yml` de v7.3.0 |
+
+**Rationale**: `actions/upload-artifact` e `actions/download-artifact` são o motivo para não bumpar
+por convenção ("próximo major") — cada uma tem um major inteiro (v5) que ainda roda em `node20`,
+então só o major seguinte (v6/v7, respectivamente) elimina o warning; um bump ingênuo para v5 em
+ambas teria deixado o problema sem resolver. Os pares SHA-pinados seguem a convenção já em uso
+neste workflow desde a seção 2 (pin por commit, versão em comentário) — mantida para as quatro
+actions de terceiros fora do namespace `actions/`.
+
+Revisados os release notes das duas mudanças de major mais arriscadas para este workflow —
+`release-please-action` v4→v5 e `build-push-action` v6→v7 — ambas listam a migração para Node 24
+como a única breaking change; nenhum input ou output consumido por `ci-cd.yml` (`release_created`,
+`tag_name`, `prs_created`, `pr`, `context`, `file`, `target`, `platforms`, `push`, `tags`,
+`cache-from`, `cache-to`) foi renomeado ou removido.
+
+**Alternatives considered**:
+- **Ignorar os warnings**: não bloqueiam a execução hoje, mas o anúncio do GitHub indica remoção
+  futura do runtime Node 20 dos runners — adiar a atualização até isso virar falha dura é trocar
+  um ajuste de poucas linhas, sem risco identificado, por uma falha de pipeline em data não
+  controlada pelo projeto.
+- **Bumpar para o major mais recente de cada action (`v7`/`v6`/`v8` conforme disponível) em vez do
+  primeiro major com `node24`**: rejeitada por introduzir mudanças de major não relacionadas ao
+  problema (ex.: `download-artifact` já tem v8) sem necessidade — o critério adotado é o menor
+  bump suficiente para eliminar o warning, minimizando superfície de mudança não relacionada.
+
 ## Resumo das decisões
 
 | # | Área | Decisão |
@@ -357,5 +409,6 @@ atualizado para refletir essa reversão.
 | 7 | Constitution | Emenda MINOR (1.0.1 → 1.1.0): stack + exceção de nomes de teste |
 | 8 | Auto-merge do PR de release | `gh pr merge --auto --merge`, condicionado à branch protection de `main` |
 | 9 | CD sem gate próprio | Revertida após incidente em produção — `ci.yml`/`release-please.yml`/`cd.yml` consolidados em `ci-cd.yml`, jobs sequenciais via `needs` |
+| 10 | Actions em Node 20 depreciado | Bump para a primeira versão de cada action confirmada em `node24`, verificado por action.yml |
 
 Nenhum `NEEDS CLARIFICATION` remanescente.
