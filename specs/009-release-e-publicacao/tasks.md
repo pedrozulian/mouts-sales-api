@@ -389,6 +389,33 @@ sucesso para o mesmo commit — sem execuções paralelas concorrentes disputand
 
 ---
 
+## Phase 11: Ajuste — actions atualizadas para runtime Node 24 (remoção de warnings de depreciação)
+
+**Goal**: eliminar as 6 anotações de warning ("Node.js 20 is deprecated... forced to run on
+Node.js 24") que passaram a aparecer em `build`, `test`, `sonar`, `release-please` e `publish`
+depois da consolidação da Phase 10 — cada uma referenciando uma ou mais actions cujo `action.yml`
+ainda declara `using: node20`. Decisão registrada em `research.md`, seção 10.
+
+- [X] T032 Atualizar, em `.github/workflows/ci-cd.yml`, as referências de action para a primeira
+  versão de cada uma confirmada (por leitura direta do `action.yml` da tag) rodando em `node24`:
+  `actions/checkout@v4`→`@v5` (4 ocorrências), `actions/setup-dotnet@v4`→`@v5` (3 ocorrências),
+  `actions/upload-artifact@v4`→`@v6`, `actions/download-artifact@v4`→`@v7`,
+  `actions/setup-java@v4`→`@v5`, `googleapis/release-please-action@5c625bf…`→
+  `@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0`,
+  `docker/setup-buildx-action@8d2750c…`→`@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0`,
+  `docker/login-action@c94ce9f…`→`@dbcb813823bdd20940b903addbd779551569679f # v4.6.0`,
+  `docker/build-push-action@10e90e3…`→`@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0` (2
+  ocorrências) — em `.github/workflows/ci-cd.yml` (ver research.md, seção 10)
+- [ ] T033 Validar, na próxima execução real do workflow `CI/CD` após esta feature ser integrada,
+  que nenhuma das 6 anotações de warning de Node 20 aparece mais em nenhum job — checkpoint
+  manual, análogo a T031 (depende de T032)
+
+**Checkpoint**: a próxima execução real do `CI/CD` deve concluir sem nenhuma anotação de
+depreciação de runtime, com os mesmos jobs e a mesma ordem `build → test → sonar →
+release-please → publish` da Phase 10, sem mudança de comportamento observável do pipeline.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

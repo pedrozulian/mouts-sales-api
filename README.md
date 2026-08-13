@@ -7,6 +7,14 @@ inteira ou de um item individual) e cálculo automático de desconto progressivo
 Cliente, filial e produto são identidades externas (id + nome denormalizado) — o serviço não
 mantém cadastro próprio deles.
 
+## Documentação de domínio (DDD)
+
+O modelo de domínio, os bounded contexts, as invariantes e os casos de uso que embasaram esta
+implementação estão documentados em
+[Mouts — Sales API (Notion)](https://harmonious-chiller-30d.notion.site/Mouts-Sales-API-3b7bddf5f1a0819a9483d3ffde0a6186?pvs=74).
+A página inicial já cobre propósito, escopo, arquitetura e padrões adotados; as três páginas
+vinculadas a ela aprofundam bounded contexts, modelo de domínio e casos de uso.
+
 ## Tecnologias
 
 - .NET 8 / C# 12 — ASP.NET Core (Minimal APIs)
