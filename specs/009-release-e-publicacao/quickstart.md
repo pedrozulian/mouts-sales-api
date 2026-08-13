@@ -2,7 +2,7 @@
 
 Guia para validar manualmente, de ponta a ponta, o que esta feature entrega (tasks geradas por
 `/speckit-tasks`). Diferente da 008, parte do comportamento aqui só é observável depois de um
-merge real em `main` (o fluxo do release-please e o workflow de CD rodam no GitHub Actions) — os
+merge real em `main` (o fluxo do release-please e o job de publicação rodam no GitHub Actions) — os
 cenários abaixo separam o que é validável localmente do que exige observar a execução no GitHub.
 
 ## Cenário 1 — Artefatos rodam sem o código-fonte, banco em outra máquina (US1, FR-001 a FR-004, FR-025 a FR-027)
@@ -112,15 +112,19 @@ Não reproduzível localmente em sua totalidade — depende do GitHub Actions. P
 validar após o merge desta feature em `main`:
 
 1. Fazer um commit convencional trivial em `main` (ex.: `fix: ajuste de mensagem de log`).
-2. **Esperado**: o workflow `release-please` roda e abre (ou atualiza) um Pull Request de release
-   contendo o bump de versão em formato semântico e a seção correspondente do `CHANGELOG.md`
-   gerada automaticamente — sem edição manual.
+2. **Esperado**: o workflow `CI/CD` (`.github/workflows/ci-cd.yml`) roda `build`/`test`/`sonar` e,
+   em seguida, o job `release-please` abre (ou atualiza) um Pull Request de release contendo o
+   bump de versão em formato semântico e a seção correspondente do `CHANGELOG.md` gerada
+   automaticamente — sem edição manual. O job `publish` não roda nesta execução (nenhuma release
+   foi criada ainda).
 3. Revisar o PR de release e mesclá-lo.
-4. **Esperado**: uma tag Git e uma GitHub Release são criadas automaticamente, com o número de
-   versão determinado pelo PR.
-5. **Esperado**: o workflow de CD dispara automaticamente a partir da Release publicada — não a
-   partir do push que mesclou o PR diretamente.
-6. Acompanhar a execução do workflow de CD no GitHub Actions.
+4. **Esperado**: o workflow `CI/CD` dispara de novo para o commit de merge, roda
+   `build`/`test`/`sonar` mais uma vez e, no job `release-please`, cria automaticamente uma tag
+   Git e uma GitHub Release com o número de versão determinado pelo PR.
+5. **Esperado**: nesta mesma execução — não em um workflow separado, e só depois de
+   `build`/`test`/`sonar` terem passado para o commit de merge — o job `publish` dispara
+   automaticamente, encadeado por `needs` ao job `release-please` que acabou de criar a release.
+6. Acompanhar a execução do job `publish` no GitHub Actions.
 7. **Esperado**: o job publica as duas imagens (`pedrozulian/mouts-sales-api` e
    `pedrozulian/mouts-sales-api-migrator`) nas tags da versão e `latest`, executa o smoke test do
    migrator publicado contra um Postgres efêmero do próprio job, e só é marcado como bem-sucedido
@@ -129,8 +133,8 @@ validar após o merge desta feature em `main`:
 
 ## Cenário 5 — Publicação falha antes de ser considerada concluída, se o artefato não funcionar (US4, FR-022 a FR-024)
 
-Validação por inspeção do workflow (não requer quebrar produção): revisar o arquivo do workflow
-de CD e confirmar que o passo de smoke test:
+Validação por inspeção do workflow (não requer quebrar produção): revisar o job `publish` em
+`.github/workflows/ci-cd.yml` e confirmar que o passo de smoke test:
 
 - Roda **depois** do push das duas imagens e **antes** do job ser marcado como concluído com
   sucesso.

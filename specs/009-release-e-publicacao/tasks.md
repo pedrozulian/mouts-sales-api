@@ -348,6 +348,45 @@ de entrada para `main` já exige os três checks (ver research.md, seção 9).
 `build`, `test` e `sonar` passarem, sem clique manual e sem nenhum step adicional em `cd.yml` —
 observável só no próximo ciclo de release real.
 
+**Nota de revisão posterior**: a garantia deste checkpoint (branch protection + auto-merge) cobre
+a *entrada* em `main`, mas não impede que `ci.yml` e `release-please.yml` — dois workflows
+distintos, ambos disparados pelo mesmo `push: branches: [main]` — corram em paralelo sem relação
+de ordem entre si sobre o commit de merge. Isso se confirmou em produção: ver Phase 10.
+
+---
+
+## Phase 10: Ajuste — workflow único, corrigindo corrida real entre CI e CD
+
+**Goal**: no primeiro ciclo de release real após a Phase 9, o CD publicou as imagens **antes** de
+`ci.yml` terminar de rodar `build`/`test`/`sonar` para o mesmo commit de merge — apesar da branch
+protection (T028) e do auto-merge condicionado (T026). Causa raiz: `ci.yml` e
+`release-please.yml` são workflows independentes, ambos disparados por `push: branches: [main]`;
+branch protection garante o que entra em `main`, não a ordem entre workflows que reagem ao push
+resultante. `release-please-action`, ao mesclar o PR de release, cria a tag + Release na mesma
+execução em que é disparado — sem esperar a execução paralela de `ci.yml`. O evento
+`release: published` decorrente disparava `cd.yml` de imediato. Decisão registrada em
+`research.md`, seção 9 (revisada).
+
+- [X] T029 Criar `.github/workflows/ci-cd.yml`: consolidar os jobs `build`, `test`, `sonar` (de
+  `ci.yml`), `release-please` (de `release-please.yml`, incluindo o step de auto-merge de T026) e
+  `publish` (de `cd.yml`, incluindo o smoke test de T016) em um único workflow, encadeados via
+  `needs: build → test → sonar → release-please → publish`. `release-please` roda apenas em
+  `push` (`if: github.event_name == 'push'`); `publish` roda apenas quando
+  `needs.release-please.outputs.release_created == 'true'`; as tags de imagem passam a usar
+  `needs.release-please.outputs.tag_name` em vez de `github.event.release.tag_name` (que dependia
+  do evento `release: published`, removido) — NOVO em `.github/workflows/ci-cd.yml` (ver
+  research.md, seção 9)
+- [X] T030 Remover `.github/workflows/ci.yml`, `.github/workflows/release-please.yml` e
+  `.github/workflows/cd.yml` — substituídos integralmente por T029
+- [ ] T031 Validar manualmente, no próximo ciclo de release real, que `build`/`test`/`sonar`
+  concluem antes do job `release-please` iniciar, e que `publish` só inicia depois que
+  `release-please` cria a tag/Release na mesma execução — checkpoint manual, análogo a T015/T017
+  (depende de T029, T030)
+
+**Checkpoint**: o próximo ciclo de release real deve mostrar `publish` como o último job de uma
+única execução do workflow `CI/CD`, sempre depois de `build`/`test`/`sonar` concluídos com
+sucesso para o mesmo commit — sem execuções paralelas concorrentes disputando o mesmo push.
+
 ---
 
 ## Dependencies & Execution Order
