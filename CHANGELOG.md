@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/pedrozulian/mouts-sales-api/compare/v1.2.1...v1.2.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* atualiza actions do CI/CD para Node 24 e linka documentação de domínio no README ([67712a3](https://github.com/pedrozulian/mouts-sales-api/commit/67712a308c30d6a550f47556a59f351d9b0b35b8))
+* atualiza as actions do ci-cd para versões compatíveis com o runtime node 24 ([ca1baa8](https://github.com/pedrozulian/mouts-sales-api/commit/ca1baa84807d0489c75a62a2d8c6f95e1b01b803))
+
 ## [1.2.1](https://github.com/pedrozulian/mouts-sales-api/compare/v1.2.0...v1.2.1) (2026-08-13)
 
 
