@@ -14,18 +14,21 @@ Abordagem, por eixo:
   Conventional Commits já praticados desde o primeiro commit do projeto. Mantém um PR de release
   sempre atualizado em `main`; o merge desse PR cria tag + GitHub Release e gera/atualiza
   `CHANGELOG.md` automaticamente — sem redação manual (ver research.md, seção 1).
-- **Publicação de imagens (US1)**: workflow de CD novo (`cd.yml`), disparado pelo evento
-  `release: published` — não por push em tag isolada, para manter o gatilho exclusivamente
-  atrelado ao fluxo revisável do release-please (FR-005, FR-021). Usa `docker/build-push-action`
-  duas vezes sobre o `docker/Dockerfile` já existente, uma por `target` (`runtime` e `migrator`),
-  publicando `pedrozulian/mouts-sales-api` e `pedrozulian/mouts-sales-api-migrator` nas tags da
-  versão e `latest`, `linux/amd64` apenas (ver research.md, seção 2).
+- **Publicação de imagens (US1)**: job `publish` em `.github/workflows/ci-cd.yml`, condicionado a
+  `release-please` ter criado a release nesta mesma execução — não mais um workflow `cd.yml`
+  separado disparado pelo evento `release: published` (decisão original revertida após incidente
+  em produção: workflows independentes reagindo ao mesmo push não têm relação de ordem entre si;
+  ver research.md, seção 9). O gatilho continua exclusivamente atrelado ao fluxo revisável do
+  release-please (FR-005, FR-021). Usa `docker/build-push-action` duas vezes sobre o
+  `docker/Dockerfile` já existente, uma por `target` (`runtime` e `migrator`), publicando
+  `pedrozulian/mouts-sales-api` e `pedrozulian/mouts-sales-api-migrator` nas tags da versão e
+  `latest`, `linux/amd64` apenas (ver research.md, seção 2).
 - **Hardening de configuração (US2)**: `ENV ASPNETCORE_ENVIRONMENT=Production` explícito no stage
   `runtime` do Dockerfile; validação fail-fast em `DependencyInjection.cs` que lança
   `InvalidOperationException` nomeando a variável ausente quando
   `ConnectionStrings:DefaultConnection` não é fornecida — antes de `AddDbContext` ser configurado
   (ver research.md, seção 4).
-- **Verificação do artefato publicado (US4)**: passo de smoke test no próprio `cd.yml`, após o
+- **Verificação do artefato publicado (US4)**: passo de smoke test no próprio job `publish`, após o
   push das duas imagens — sobe um `postgres:16` como service container do job e roda a imagem
   `-migrator` recém-publicada contra ele, falhando o job se o código de saída não for `0` (ver
   research.md, seção 6).
@@ -83,8 +86,9 @@ operações existentes, exceto a exigência de configuração explícita descrit
 `docker/docker-compose.yml` (desenvolvimento, build local) MUST continuar funcionando sem
 alteração (FR-027).
 
-**Scale/Scope**: nenhum endpoint novo; 6 endpoints existentes preservados; 2 workflows novos
-(`release-please.yml`, `cd.yml`); 1 compose novo (`docker-compose.release.yml`); 1 arquivo de
+**Scale/Scope**: nenhum endpoint novo; 6 endpoints existentes preservados; 1 workflow (`ci-cd.yml`,
+consolidando o `ci.yml` preexistente com os `release-please.yml`/`cd.yml` desta feature — 3
+arquivos originais viraram 1); 1 compose novo (`docker-compose.release.yml`); 1 arquivo de
 produção ajustado (`DependencyInjection.cs`) + 1 linha no Dockerfile; 3 identificadores
 renomeados; 1 emenda de constitution; README ganha uma seção.
 
@@ -139,9 +143,10 @@ specs/009-release-e-publicacao/
 ```text
 .github/
 └── workflows/
-    ├── ci.yml                              # INALTERADO — build/test/sonar já existentes
-    ├── release-please.yml                  # NOVO — mantém o PR de release em main, cria tag + GitHub Release no merge (US3)
-    └── cd.yml                              # NOVO — dispara em release published; build+push das duas imagens; smoke test do migrator publicado (US1, US4)
+    └── ci-cd.yml                           # AJUSTADO — consolida ci.yml + release-please.yml + cd.yml (antes 3 arquivos, removidos)
+                                             #   em jobs sequenciais via needs: build → test → sonar →
+                                             #   release-please → publish. Corrige corrida entre CI e CD
+                                             #   observada em produção (US1, US3, US4; ver research.md, seção 9)
 
 docker/
 ├── Dockerfile                              # AJUSTAR — ENV ASPNETCORE_ENVIRONMENT=Production explícito no stage runtime (US2)
@@ -191,5 +196,18 @@ superfície de automação do projeto:
 
 | Adição | Por que necessária | Alternativa mais simples rejeitada porque |
 |---|---|---|
-| Dois workflows novos (`release-please.yml`, `cd.yml`) em vez de um único workflow combinado | Separa uma preocupação de baixo risco e frequente (manter o PR de release atualizado a cada push) de uma de alto impacto e pouco frequente (publicar imagem, irreversível no registro). Um único workflow reagindo a `push` em `main` obrigaria condicionar toda a lógica de publicação a `if: steps.release.outputs.release_created`, tornando o arquivo mais difícil de auditar e testar isoladamente. | Um workflow único: mais simples de navegar num primeiro momento, mas mistura o ciclo de vida "PR sempre atualizado" com o ciclo de vida "publicação irreversível", dificultando reexecutar (`re-run`) apenas a publicação sem re-tocar a lógica de versionamento. |
+| ~~Dois workflows novos (`release-please.yml`, `cd.yml`) em vez de um único workflow combinado~~ — **revertido, ver nota abaixo** | ~~Separava uma preocupação de baixo risco e frequente (manter o PR de release atualizado) de uma de alto impacto e pouco frequente (publicar imagem)~~ | ~~Um workflow único misturaria os dois ciclos de vida~~ |
+
+> **Nota de revisão**: a linha acima registrava a decisão original de manter `release-please.yml`
+> e `cd.yml` como workflows separados de `ci.yml`. Essa decisão foi **revertida em produção**: os
+> três workflows, disparados independentemente pelo mesmo push em `main`, não têm garantia de
+> ordem entre si — o CD chegou a publicar antes do CI terminar. A separação em arquivos que este
+> item defendia como vantagem de auditabilidade era, na prática, a causa estrutural da corrida.
+> Os três foram consolidados em `.github/workflows/ci-cd.yml`, com `build → test → sonar →
+> release-please → publish` como jobs sequenciais via `needs` — a única forma de expressar "isto
+> só roda depois daquilo" para jobs que antes viviam em workflows diferentes. A preocupação
+> original sobre `re-run` isolado da publicação é mitigada por `publish` ser o último job da
+> cadeia: reexecutar apenas ele (`re-run failed jobs` do próprio Actions) continua possível sem
+> re-tocar `build`/`test`/`sonar`. Ver research.md, seção 9, para o relato completo do incidente e
+> as alternativas descartadas.
 | `docker-compose.release.yml` como arquivo separado, em vez de profiles no `docker-compose.yml` existente | Compose não oferece alternância limpa entre `build:` e `image:` para o mesmo serviço via profile sem duplicar a definição do serviço de qualquer forma (ver research.md, seção 5) — a separação em arquivos é mais legível para quem só quer consumir a imagem publicada, sem precisar entender profiles. | Profiles no arquivo único: evita um segundo arquivo, mas exige que o serviço `api`/`migrator` seja declarado duas vezes de qualquer forma (uma por profile) para trocar `build:` por `image:` — não há economia real de linhas, só perda de clareza sobre qual delas está ativa. |

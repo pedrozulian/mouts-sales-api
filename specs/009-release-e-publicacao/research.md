@@ -76,9 +76,16 @@ GitHub repository/environment settings antes da primeira execução do workflow.
 
 ## 3. Gatilho da publicação: Release do release-please, não push em tag isolado
 
-**Decision**: O workflow de publicação (`cd.yml`) escuta o evento `release: types: [published]`
-emitido pelo `release-please-action` quando o PR de release é mesclado — não um `push: tags:`
-genérico.
+> **Nota de revisão** (ver seção 9): a decisão abaixo — gatilho por evento `release: published`
+> em um workflow `cd.yml` separado — foi **revertida em produção** depois de uma corrida real
+> entre CI e CD (release publicada antes do CI terminar). O gatilho por marco de versão
+> permanece correto e é preservado; o que mudou é o mecanismo: em vez de um evento de workflow
+> independente, `release-please` e `publish` agora são jobs sequenciais do mesmo workflow,
+> ligados por `needs`. Seção 9 documenta o incidente e a decisão final.
+
+**Decision** (histórica, ver nota acima): O workflow de publicação (`cd.yml`) escuta o evento
+`release: types: [published]` emitido pelo `release-please-action` quando o PR de release é
+mesclado — não um `push: tags:` genérico.
 
 **Rationale**: Usar o evento `release published` (em vez de `push` em tags `v*`) acopla a
 publicação exclusivamente ao fluxo controlado do release-please (FR-005: gatilho exclusivo pelo
@@ -269,28 +276,72 @@ restante do fluxo de release sem abrir mão do ponto de revisão.
 Branches, ação manual do usuário, fora do controle de versão. Sem essa configuração, `--auto`
 mescla sem esperar nada; com ela, é o próprio GitHub que garante a espera, sem código adicional.
 
-## 9. CD não precisa de um gate próprio esperando o CI
+## 9. CD ainda precisava esperar o CI — incidente em produção e correção final
 
-**Decision**: `cd.yml` permanece disparando só em `release: published`, sem nenhum step
-adicional aguardando o `ci.yml`.
+**O que a decisão original assumia (revertida)**: que branch protection em `main`, exigindo os
+checks `build`/`test`/`sonar` para mesclar o PR de release, era suficiente para garantir que
+`cd.yml` (disparado por `release: published`) nunca publicasse antes do CI terminar. Ver seção 3
+para a decisão original completa.
 
-**Rationale**: uma release só passa a existir depois que o PR de release é mesclado — e esse
-merge, pela decisão da seção 8, só ocorre depois que `build`, `test` e `sonar` passarem para
-aquele exato conteúdo (branch protection bloqueia qualquer merge, automático ou manual, até os
-checks passarem). Como o merge usa a estratégia "criar commit de merge", a árvore do commit
-resultante em `main` é idêntica à do PR que acabou de ser validado — não há conteúdo novo,
-não-testado, entrando nesse momento. Um segundo gate em `cd.yml` estaria revalidando a mesma
-garantia que a branch protection já oferece na única porta de entrada para `main`, sem reduzir
-risco adicional.
+**O que aconteceu**: no primeiro ciclo real de release após esta feature ser integrada, o CD
+publicou as imagens **antes** do CI (`ci.yml`) terminar de rodar para o mesmo commit. A garantia
+da branch protection era real, mas cobria a coisa errada: ela impede que conteúdo não verificado
+seja mesclado no PR, não impede o que acontece *depois* do push resultante em `main`. O merge do
+PR de release (estratégia "merge commit") cria um SHA novo em `main`; esse push dispara, de forma
+totalmente independente e em paralelo, tanto `ci.yml` (`on: push: branches: [main]`) quanto
+`release-please.yml` (`on: push: branches: [main]`, o mesmo evento). `release-please-action`,
+ao detectar que o push mesclado é o próprio PR de release, cria a tag e a GitHub Release
+**nessa mesma execução** — sem esperar o resultado da execução paralela de `ci.yml` sobre o
+mesmo SHA. O evento `release: published` daí decorrente dispara `cd.yml` imediatamente, com o CI
+ainda em andamento. Dois workflows distintos reagindo ao mesmo evento não têm relação de ordem
+entre si — branch protection não cria uma.
+
+**Decision**: eliminar a possibilidade estrutural da corrida, substituindo os três workflows
+independentes (`ci.yml`, `release-please.yml`, `cd.yml`) por um único workflow
+(`.github/workflows/ci-cd.yml`) com jobs sequenciais via `needs`:
+`build → test → sonar → release-please → publish`. Cada job só inicia depois que o anterior
+concluir com sucesso, **na mesma execução** — não há mais dois eventos concorrentes para o mesmo
+push. Os jobs `release-please` e `publish` são condicionados por `if:`:
+
+- `release-please` roda apenas em `push` (nunca em `pull_request`) — mantém/atualiza o PR de
+  release, ou cria a tag + Release quando o push mesclado é o próprio PR de release.
+- `publish` roda apenas quando `release-please` produziu `release_created == 'true'` na mesma
+  execução — build+push das duas imagens e smoke test, usando `needs.release-please.outputs.tag_name`
+  para nomear as tags de imagem (substitui `github.event.release.tag_name`, que dependia do
+  evento `release: published`).
+
+Isso implementa o fluxo em 3 estágios pretendido desde o início: PR → `build/test/sonar`; merge
+de feature em `main` → `build/test/sonar` + `release-please` (sem publicar); merge do PR de
+release → `build/test/sonar` + `release-please` + `publish`, cada estágio estritamente depois do
+anterior.
+
+**Rationale**: a garantia de ordem em GitHub Actions só existe *dentro* de uma mesma execução de
+workflow, via `needs` — nunca *entre* workflows disparados pelo mesmo evento. A decisão original
+(seção 3) tratava `release: published` como um gatilho semântico limpo, mas ignorava que o
+próprio ato de chegar a esse evento dependia de dois workflows correndo em paralelo sobre o commit
+de merge. Consolidar em um arquivo não é só mais simples de auditar — é a única forma, no modelo
+de execução do GitHub Actions, de expressar "isto só roda depois daquilo" para jobs que hoje
+vivem em workflows diferentes reagindo ao mesmo push. `Complexity Tracking` em `plan.md` também é
+atualizado para refletir essa reversão.
 
 **Alternatives considered**:
-- **Polling do `ci.yml` dentro de `cd.yml`** (tentativa intermediária, revertida): implementada e
-  testada localmente, mas redundante com a garantia da seção 8 uma vez que a branch protection
-  está configurada — a mesma reversão de complexidade desnecessária se aplica aqui.
-- **Trigger `workflow_run` do `ci.yml` em vez de `release: published`**: dispararia `cd.yml` a
-  cada conclusão do `ci.yml`, exigindo lógica adicional para filtrar apenas os commits que
-  correspondem a uma release publicada (o evento `workflow_run` não carrega esse contexto) —
-  mais convoluto do que manter `release: published` como gatilho semântico único.
+- **Manter `cd.yml` disparando em `release: published`, sem gate próprio** (decisão original,
+  revertida): assumia que branch protection cobria o intervalo entre merge e publicação — não
+  cobre, pelas razões acima. Esta é a decisão que o incidente refutou.
+- **Polling do `ci.yml` dentro de `cd.yml`** (tentativa intermediária anterior a esta feature,
+  também revertida): resolveria o sintoma, mas reimplementa manualmente uma garantia de ordem que
+  `needs` já oferece nativamente quando os jobs estão no mesmo workflow — mantida fora por ser
+  complexidade redundante face à opção estrutural.
+- **Trigger `workflow_run` do `ci.yml` em `cd.yml`**: dispararia a cada conclusão de `ci.yml`,
+  exigindo lógica adicional para filtrar apenas os commits que correspondem a uma release
+  publicada (o evento `workflow_run` não carrega esse contexto) — mais convoluto do que jobs
+  sequenciais no mesmo arquivo, e ainda deixaria `release-please.yml` como um terceiro workflow
+  independente reagindo ao mesmo push.
+- **`workflow_call` (workflow reutilizável)**: encadearia `ci.yml` chamando `cd.yml` como job
+  reutilizável, preservando arquivos separados — tecnicamente resolveria a corrida, mas mantém a
+  divisão em múltiplos arquivos sem nenhum ganho sobre `needs` dentro de um único workflow, para
+  um pipeline que já é linear (sem branches condicionais reaproveitadas por outros triggers).
+  Rejeitada por não simplificar nada sobre a opção escolhida.
 
 ## Resumo das decisões
 
@@ -298,13 +349,13 @@ risco adicional.
 |---|---|---|
 | 1 | Versionamento/changelog | release-please, modo simple, PR de release |
 | 2 | Publicação de imagens | `docker/build-push-action`, 2 targets, `linux/amd64` only |
-| 3 | Gatilho do CD | Evento `release: published` do release-please |
+| 3 | Gatilho do CD | Marco de versão do release-please — mecanismo revisado na seção 9 |
 | 4a | Ambiente default | `ENV ASPNETCORE_ENVIRONMENT=Production` no stage `runtime` |
 | 4b | Connection string ausente | Exception fail-fast em `DependencyInjection.cs` |
 | 5 | Compose de release | `docker/docker-compose.release.yml` novo, com `image:` |
 | 6 | Smoke test | Service container Postgres + `docker run` do migrator publicado |
 | 7 | Constitution | Emenda MINOR (1.0.1 → 1.1.0): stack + exceção de nomes de teste |
 | 8 | Auto-merge do PR de release | `gh pr merge --auto --merge`, condicionado à branch protection de `main` |
-| 9 | CD sem gate próprio | Desnecessário — branch protection já garante que só entra em `main` o que passou no CI |
+| 9 | CD sem gate próprio | Revertida após incidente em produção — `ci.yml`/`release-please.yml`/`cd.yml` consolidados em `ci-cd.yml`, jobs sequenciais via `needs` |
 
 Nenhum `NEEDS CLARIFICATION` remanescente.
